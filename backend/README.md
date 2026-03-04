@@ -24,7 +24,7 @@ If you already have `.venv` with dependencies installed, just activate it and ru
 
 ## Run
 
-**Important:** Run from the **project root** (the folder that contains `lib/` and `backend/`), so Python can find the `backend` module. With `.venv` activated:
+**Important:** Run from the **project root** (the folder that contains `app/` and `backend/`), so Python can find the `backend` module. With `.venv` activated:
 
 ```bash
 cd "/path/to/CarotidCheck app"

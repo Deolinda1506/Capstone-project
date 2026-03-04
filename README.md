@@ -41,24 +41,27 @@ AI-driven carotid ultrasound analysis for enhanced stroke triage in Rwanda. RBC-
 ## Project Structure
 
 ```
-lib/
-├── core/
-│   ├── constants/
-│   ├── models/       # User, Patient, Location, UserRole
-│   ├── router/       # go_router config
-│   ├── security/     # Encrypted image storage
-│   ├── services/     # Auth, Sync, SecureStorage
-│   ├── theme/
-│   └── widgets/      # SyncStatusIndicator
-├── screens/
-│   ├── dashboard/    # CHW, Clinician, Admin
-│   ├── login/        # Login, OTP
-│   ├── patient/      # Capture, Consent
-│   ├── register/
-│   ├── referral/
-│   ├── result/
-│   └── scan/
-└── main.dart
+app/                 # Flutter app
+├── lib/
+│   ├── core/
+│   │   ├── constants/
+│   │   ├── models/       # User, Patient, Location, UserRole
+│   │   ├── router/       # go_router config
+│   │   ├── security/     # Encrypted image storage
+│   │   ├── services/     # Auth, Sync, SecureStorage
+│   │   ├── theme/
+│   │   └── widgets/      # SyncStatusIndicator
+│   ├── screens/
+│   │   ├── dashboard/   # CHW, Clinician, Admin
+│   │   ├── login/       # Login, OTP
+│   │   ├── patient/     # Capture, Consent
+│   │   ├── register/
+│   │   ├── referral/
+│   │   ├── result/
+│   │   └── scan/
+│   └── main.dart
+backend/             # FastAPI backend
+ML/                  # ML models and training
 ```
 
 ## Run
@@ -80,13 +83,14 @@ Run from project root so Python finds the `backend` module.
 **2. Run the Flutter app**:
 
 ```bash
+cd app
 flutter pub get
 flutter run
 ```
 
 For Android emulator, the backend is at `10.0.2.2:8000`. Set when building:
 ```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+cd app && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 ```
 
 ## Demo Login
