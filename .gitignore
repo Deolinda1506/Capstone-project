@@ -2,6 +2,7 @@
 .venv/
 venv/
 data/
+ML/models/
 *.class
 *.log
 *.pyc
