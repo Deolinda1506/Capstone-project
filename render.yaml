@@ -1,0 +1,25 @@
+# Render Blueprint - CarotidCheck API
+# Deploy: https://dashboard.render.com/blueprints → New Blueprint Instance → Connect repo
+
+databases:
+  - name: carotidcheck-db
+    plan: free
+
+services:
+  - type: web
+    name: carotidcheck-api
+    runtime: python
+    plan: free
+
+    buildCommand: pip install -r backend/requirements-api.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: carotidcheck-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DISABLE_AUTH
+        value: "0"
