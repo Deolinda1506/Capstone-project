@@ -4,9 +4,7 @@ import '../../core/services/auth_service.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/l10n/l10n_extension.dart';
-import '../../core/widgets/sync_status_indicator.dart';
 import '../../core/widgets/app_logo.dart';
-import '../../core/widgets/language_selector.dart';
 import '../../core/widgets/responsive_layout.dart';
 
 /// Login: District ID + password
@@ -55,19 +53,6 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const LanguageSelector(compact: true),
-                  SyncStatusIndicator(
-                    syncService: widget.syncService,
-                    showLabel: true,
-                  ),
-                ],
-              ),
-            ),
             Expanded(
               child: SingleChildScrollView(
                 padding: EdgeInsets.symmetric(

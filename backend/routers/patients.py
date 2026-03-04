@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import User, Patient
 from backend.schemas.patient import PatientCreate, PatientResponse
-from backend.auth import get_current_user
+from backend.auth import get_current_user_or_dev
 from backend import email_service
 
 router = APIRouter(prefix="/patients", tags=["patients"])
@@ -23,7 +23,7 @@ def _generate_patient_identifier() -> str:
 def create_patient(
     body: PatientCreate,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user_or_dev)],
 ):
     # Assign unique ID: use provided identifier (e.g. CC-0001 from Flutter) or generate
     identifier = (body.identifier or "").strip() or _generate_patient_identifier()
@@ -58,7 +58,7 @@ def create_patient(
 def list_patients(
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     db: Annotated[Session, Depends(get_db)] = ...,
-    current_user: Annotated[User, Depends(get_current_user)] = ...,
+    current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
     """List patients for the current user (village-filtered by user's facility)."""
     rows = (

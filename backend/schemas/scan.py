@@ -41,4 +41,5 @@ class ScanUploadResponse(BaseModel):
     scan: ScanResponse
     result: ResultResponse
     segmentation_overlay_base64: str | None = None  # PNG overlay (green = wall) for display
+    has_ai_overlay: bool = False  # True when overlay is from AI segmentation (green mask)
     plaque_detected: bool | None = None  # Derived from IMT: True if IMT >= 2.0 mm

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
-/// CarotidCheck logo - uses SVG (carotid vessel icon); fallback to icon if SVG fails
+/// CarotidCheck logo - vascular/medical branding
 class AppLogo extends StatelessWidget {
   final double height;
   final bool showInAppBar;
@@ -34,16 +33,14 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final displayColor = color ?? (showInAppBar ? Colors.white : null);
-    final widget = SvgPicture.asset(
-      'assets/logo_carotid.svg',
+    return Image.asset(
+      'assets/logo_carotid.png',
       height: height,
-      width: height * (100 / 120),
+      width: height * 1.2,
       fit: BoxFit.contain,
-      colorFilter: displayColor != null
-          ? ColorFilter.mode(displayColor, BlendMode.srcIn)
-          : null,
+      color: color,
+      colorBlendMode: color != null ? BlendMode.srcIn : null,
+      errorBuilder: (_, __, ___) => Icon(Icons.medical_services, size: height, color: color),
     );
-    return widget;
   }
 }

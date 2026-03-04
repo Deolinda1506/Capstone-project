@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/l10n_extension.dart';
 
-/// Tab order for main shell navigation
-const List<String> _tabPaths = ['/', '/analyses', '/patients', '/referrals', '/settings'];
+/// Tab order for main shell navigation (Home, Settings only)
+const List<String> _tabPaths = ['/', '/settings'];
 
 int? _tabIndex(String location) {
   for (var i = 0; i < _tabPaths.length; i++) {
@@ -22,6 +22,10 @@ String? _nextPath(String location) {
 }
 
 String? _prevPath(String location) {
+  // Analyses, Patients, Referrals are reached from Settings - back goes to settings
+  if (location.startsWith('/analyses') || location.startsWith('/patients') || location.startsWith('/referrals')) {
+    return '/settings';
+  }
   final idx = _tabIndex(location);
   if (idx == null || idx <= 0) return null;
   return _tabPaths[idx - 1];
@@ -32,7 +36,9 @@ bool _isNestedRoute(String location) {
   for (final p in _tabPaths) {
     if (location != p && location.startsWith('$p/')) return true;
   }
-  return false;
+  // /referrals/hospitals etc.
+  final segments = location.split('/').where((s) => s.isNotEmpty).toList();
+  return segments.length >= 2;
 }
 
 /// Back button - pops when on nested route, else goes to previous tab

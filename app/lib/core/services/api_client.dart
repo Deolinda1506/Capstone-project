@@ -50,7 +50,11 @@ class ApiClient {
           }
         }
         final streamed = await request.send();
-        response = await http.Response.fromStream(streamed);
+        // ML inference can take 60–90s; use 2 min timeout for scan upload
+        response = await http.Response.fromStream(streamed).timeout(
+          const Duration(seconds: 120),
+          onTimeout: () => throw Exception('Scan upload timed out (120s). ML inference may still be running.'),
+        );
       } else {
         switch (method) {
           case 'GET':
@@ -140,6 +144,10 @@ class ApiClient {
 
   Future<ApiResponse<List<dynamic>>> listScansWithResults({int limit = 50}) =>
       _request('GET', '/scans/with-results?limit=$limit');
+
+  /// High-risk referrals for hospital dashboard (clinicians see all, CHWs see own)
+  Future<ApiResponse<List<dynamic>>> listHighRiskReferrals({int limit = 50}) =>
+      _request('GET', '/scans/high-risk?limit=$limit');
 
   Future<ApiResponse<Map<String, dynamic>>> health() =>
       _request('GET', '/health');

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/l10n/l10n_extension.dart';
+import '../../core/models/user_role.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/referral_list_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -51,6 +52,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SettingsSection(
             title: l10n.t('preferences'),
             children: [
+              if (auth.currentUser?.role == UserRole.clinician || auth.currentUser?.role == UserRole.admin)
+                ListTile(
+                  leading: const Icon(Icons.local_hospital),
+                  title: Text(l10n.t('hospitalDashboard')),
+                  subtitle: Text(l10n.t('incomingReferrals')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.go('/hospital-dashboard'),
+                ),
               ListTile(
                 leading: const Icon(Icons.language),
                 title: Text(l10n.t('language')),

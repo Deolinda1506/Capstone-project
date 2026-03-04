@@ -18,6 +18,7 @@ import '../../screens/settings/settings_screen.dart';
 import '../../screens/dashboard/chw_dashboard.dart';
 import '../../screens/dashboard/clinician_dashboard.dart';
 import '../../screens/dashboard/admin_dashboard.dart';
+import '../../screens/dashboard/hospital_dashboard_screen.dart';
 import '../models/user_model.dart';
 import '../models/patient_model.dart';
 import '../models/user_role.dart';
@@ -109,30 +110,8 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/analyses',
-                builder: (context, state) => const AnalysesScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/patients',
-                builder: (context, state) => const PatientsScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/referrals',
-                builder: (context, state) => const ReferralScreen(),
-                routes: [
-                  GoRoute(
-                    path: 'hospitals',
-                    builder: (context, state) => const HospitalsScreen(),
-                  ),
-                ],
+                path: '/hospital-dashboard',
+                builder: (context, state) => const HospitalDashboardScreen(),
               ),
             ],
           ),
@@ -143,6 +122,24 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
                 builder: (context, state) => const SettingsScreen(),
               ),
             ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/analyses',
+        builder: (context, state) => const AnalysesScreen(),
+      ),
+      GoRoute(
+        path: '/patients',
+        builder: (context, state) => const PatientsScreen(),
+      ),
+      GoRoute(
+        path: '/referrals',
+        builder: (context, state) => const ReferralScreen(),
+        routes: [
+          GoRoute(
+            path: 'hospitals',
+            builder: (context, state) => const HospitalsScreen(),
           ),
         ],
       ),

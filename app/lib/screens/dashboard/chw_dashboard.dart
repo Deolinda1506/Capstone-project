@@ -4,7 +4,6 @@ import '../../core/models/user_model.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/l10n/l10n_extension.dart';
-import '../../core/widgets/sync_status_indicator.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/responsive_layout.dart';
@@ -36,7 +35,6 @@ class ChwDashboard extends StatelessWidget {
           ],
         ),
         actions: [
-          SyncStatusIndicator(syncService: syncService, showLabel: false),
           navNextButton(context),
         ],
       ),

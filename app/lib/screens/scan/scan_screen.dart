@@ -62,6 +62,7 @@ class _ScanScreenState extends State<ScanScreen> {
         final imt = (result?['imt_mm'] as num?)?.toDouble() ?? 0.0;
         final plaqueDetected = uploadRes.data!['plaque_detected'] as bool?;
         final overlayBase64 = uploadRes.data!['segmentation_overlay_base64'] as String?;
+        final hasAiOverlay = uploadRes.data!['has_ai_overlay'] as bool? ?? false;
         final originalImageBase64 = overlayBase64 ?? base64Encode(_imageBytes!);
         if (mounted) context.push('/result', extra: {
           'risk': risk,
@@ -71,7 +72,7 @@ class _ScanScreenState extends State<ScanScreen> {
           'analyzedAt': DateTime.now().toIso8601String(),
           'segmentationOverlayBase64': overlayBase64,
           'originalImageBase64': originalImageBase64,
-          'hasAiOverlay': overlayBase64 != null && overlayBase64.isNotEmpty,
+          'hasAiOverlay': hasAiOverlay,
         });
       } else {
         messenger.showSnackBar(

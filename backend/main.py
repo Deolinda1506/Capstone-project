@@ -47,6 +47,13 @@ async def lifespan(app: FastAPI):
     """Create DB tables on startup (use Alembic in prod for migrations)."""
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_columns()
+    # Preload ML model so first /scans/upload is faster (avoids Swagger timeout)
+    try:
+        from backend.inference import load_model
+        load_model()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Could not preload ML model: %s. First scan may be slow.", e)
     yield
     # shutdown if needed
 
@@ -80,3 +87,14 @@ def root():
 def health():
     """Lightweight check that the server is up. Use this to verify connectivity."""
     return {"status": "ok"}
+
+
+@app.get("/ml-status")
+def ml_status():
+    """Check if ML model is loaded (required for real AI overlay)."""
+    try:
+        from backend.inference import load_model
+        load_model()
+        return {"ml_ready": True, "overlay_available": True}
+    except Exception as e:
+        return {"ml_ready": False, "overlay_available": False, "error": str(e)}

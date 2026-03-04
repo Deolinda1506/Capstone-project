@@ -1,18 +1,19 @@
 """Scans: upload and list with results (protected). Images processed in-memory only (not stored permanently)."""
+import base64
 import hashlib
 import logging
 from uuid import uuid4
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
-from sqlalchemy.orm import Session
 
 from backend.database import get_db
 from backend.models import User, Patient, Scan, Result
 from backend.schemas.scan import ScanUploadResponse
-from backend.auth import get_current_user
+from backend.auth import get_current_user_or_dev
 from backend import sms_alerts
 from backend import email_service
 
@@ -28,13 +29,13 @@ router = APIRouter(prefix="/scans", tags=["scans"])
 async def upload_scan_image(
     patient_id: Annotated[str, Form(description="Patient UUID or display identifier (e.g. CC-0001). Create patient via POST /patients first if needed.")],
     file: Annotated[UploadFile, File(description="Carotid ultrasound image")],
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)] = ...,
+    current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
     """
     Upload an image for a patient: creates a scan, runs prediction, creates the result.
     If high-risk, referral SMS and email are sent. Image is processed in-memory only (not stored).
-    Requires Authorization: Bearer <token>.
+    Token optional: if provided, uses that user; otherwise uses default dev user.
     patient_id can be the patient's UUID (id) or their display identifier (e.g. CC-0001).
     """
     ct = (file.content_type or "").lower()
@@ -64,11 +65,16 @@ async def upload_scan_image(
         pred = predict_imt(contents, return_segmentation_overlay=True)
     except ImportError as e:
         logger.warning("ML model not available (%s). Using demo fallback.", e)
-        # Demo fallback: vary by image hash so different images get different results
         h = int(hashlib.sha256(contents[:1024]).hexdigest()[:8], 16)
-        imt_mm = 2.0 + (h % 25) / 10  # 2.0 to 4.4 mm
+        imt_mm = round(2.0 + (h % 25) / 10, 2)
         risk_level = "High" if imt_mm >= 3.5 else "Moderate" if imt_mm >= 3.0 else "Low"
-        pred = {"imt_mm": round(imt_mm, 2), "risk_level": risk_level, "is_high_risk": imt_mm >= 3.5, "segmentation_overlay_base64": None}
+        pred = {
+            "imt_mm": imt_mm,
+            "risk_level": risk_level,
+            "is_high_risk": imt_mm >= 3.5,
+            "segmentation_overlay_base64": base64.b64encode(contents).decode("ascii"),
+            "has_ai_overlay": False,
+        }
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Prediction failed: {str(e)}")
     scan = Scan(
@@ -109,6 +115,7 @@ async def upload_scan_image(
         scan=scan,
         result=result,
         segmentation_overlay_base64=pred.get("segmentation_overlay_base64"),
+        has_ai_overlay=pred.get("has_ai_overlay", False),
         plaque_detected=plaque_detected,
     )
 
@@ -117,7 +124,7 @@ async def upload_scan_image(
 def list_scans_with_results(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     db: Annotated[Session, Depends(get_db)] = ...,
-    current_user: Annotated[User, Depends(get_current_user)] = ...,
+    current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
     """List recent scans with result and patient info for analyses view."""
     rows = (
@@ -131,6 +138,42 @@ def list_scans_with_results(
         .limit(limit)
         .all()
     )
+    return [
+        {
+            "scan_id": s.id,
+            "patient_id": p.id,
+            "patient_identifier": p.identifier,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "imt_mm": r.imt_mm,
+            "risk_level": r.risk_level,
+            "is_high_risk": r.is_high_risk,
+            "plaque_detected": r.imt_mm >= 2.0,
+        }
+        for s, r, p in rows
+    ]
+
+
+@router.get("/high-risk")
+def list_high_risk_referrals(
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    db: Annotated[Session, Depends(get_db)] = ...,
+    current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
+):
+    """
+    List high-risk scans for hospital dashboard.
+    Clinicians and admins see all high-risk referrals; CHWs see only their own.
+    """
+    q = (
+        db.query(Scan, Result, Patient)
+        .join(Result, Scan.id == Result.scan_id)
+        .join(Patient, Scan.patient_id == Patient.id)
+        .filter(Result.is_high_risk == True, Scan.is_deleted == False)
+    )
+    role = (current_user.role or "chw").lower()
+    if role == "chw":
+        q = q.filter(Patient.user_id == current_user.id)
+    q = q.order_by(Result.created_at.desc()).limit(limit)
+    rows = q.all()
     return [
         {
             "scan_id": s.id,

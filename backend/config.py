@@ -20,6 +20,9 @@ def get_database_url() -> str:
     return url
 
 
+# Auth: set DISABLE_AUTH=0 to require tokens. Default: no token required (dev mode).
+DISABLE_AUTH = os.getenv("DISABLE_AUTH", "1").strip().lower() in ("1", "true", "yes")
+
 # JWT (email/password login)
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production-use-openssl-rand")
 ALGORITHM = "HS256"

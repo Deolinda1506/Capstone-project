@@ -1,124 +1,186 @@
-# CarotidCheck (StrokeLink)
+# CarotidCheck
 
-AI-driven carotid ultrasound analysis for enhanced stroke triage in Rwanda. RBC-compliant Flutter frontend with role-based access control.
+AI-powered carotid ultrasound screening for stroke risk assessment in Rwanda. Community health workers capture scans, get instant IMT (intima-media thickness) and risk levels, and refer high-risk patients to hospitals.
 
-## Features
+---
 
-### 1. Role-Based Access Control (RBAC)
+## Quick Start
 
-| Level | Role | UI Focus |
-|-------|------|----------|
-| 1 | Community Health Worker (CHW) | Scan → Result (Color) → Refer. Village-filtered patients only. |
-| 2 | Hospital Clinician | Review AI Segmentation → Clinical Validation → Treatment Plan |
-| 3 | Administrator/Researcher (ALU/RBC) | Anonymized stats → System Health → AI Accuracy Monitoring |
+### Prerequisites
 
-### 2. Simple Login & Registration
+- **Python 3.12** (3.13 not supported by PyTorch)
+- **Flutter 3.x** with Dart 3.10+
+- **Git**
 
-- **Login**: Email + password (via backend API)
-- **Register**: Name, email, password (min 6 characters)
-- Backend: FastAPI at `http://localhost:8000` (configurable via `API_BASE_URL`)
-
-### 3. Hospital-Linked Account Creation
-
-- Province → District → Sector → Health Center selection
-- Account stays **Pending** until supervisor/admin approves
-
-### 4. Patient Linking (NID Integration)
-
-- Camera OCR placeholder for Rwandan National ID
-- Privacy consent: digital signature or thumbprint
-- Required for University Research ethics
-
-### 5. Security
-
-- **Encrypted storage**: `flutter_secure_storage` for tokens; app-private folder for images (not in Photo Gallery)
-- **Watermarking**: User ID + Timestamp metadata on each scan
-### 6. Sync Status
-
-- **Grey**: Offline
-- **Green**: Online (backend reachable)
-
-## Project Structure
-
-```
-app/                 # Flutter app
-├── lib/
-│   ├── core/
-│   │   ├── constants/
-│   │   ├── models/       # User, Patient, Location, UserRole
-│   │   ├── router/       # go_router config
-│   │   ├── security/     # Encrypted image storage
-│   │   ├── services/     # Auth, Sync, SecureStorage
-│   │   ├── theme/
-│   │   └── widgets/      # SyncStatusIndicator
-│   ├── screens/
-│   │   ├── dashboard/   # CHW, Clinician, Admin
-│   │   ├── login/       # Login, OTP
-│   │   ├── patient/     # Capture, Consent
-│   │   ├── register/
-│   │   ├── referral/
-│   │   ├── result/
-│   │   └── scan/
-│   └── main.dart
-backend/             # FastAPI backend
-ML/                  # ML models and training
-```
-
-## Run
-
-**1. Start the backend** (from project root):
+### Step 1: Clone the Repository
 
 ```bash
-cd "/path/to/CarotidCheck app"
-python3.12 -m venv .venv
-source .venv/bin/activate
-# Lightweight (~50 MB) - use when disk space is low. Scan returns stub result.
-pip install -r backend/requirements-api.txt
-# Or full install (~2–3 GB) for real ML inference:
-# pip install -r backend/requirements.txt
-python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+git clone <your-repo-url>
+cd "CarotidCheck app"
 ```
-Run from project root so Python finds the `backend` module.
 
-**2. Run the Flutter app**:
+### Step 2: Backend Setup
+
+```bash
+# Create and activate virtual environment
+python3.12 -m venv venv
+source venv/bin/activate   # On Windows: venv\Scripts\activate
+
+# Install dependencies — choose ONE:
+```
+
+**Option A: Full ML stack** (`backend/requirements.txt`) — ~2–3 GB  
+- PyTorch, MONAI, OpenCV for real AI inference  
+- Real IMT, risk level, segmentation overlay  
+- Requires model at `ML/models/carotid_swin_unetr_2d.pt`
+
+```bash
+pip install -r backend/requirements.txt
+```
+
+**Option B: API only** (`backend/requirements-api.txt`) — ~50 MB  
+- Auth, patients, scans work  
+- Demo/stub results (no real AI overlay)  
+- Use when disk space is low or for quick testing
+
+```bash
+pip install -r backend/requirements-api.txt
+```
+
+### Step 3: Run the Backend
+
+```bash
+# From project root (folder containing app/ and backend/)
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+- **API docs:** http://localhost:8000/docs  
+- **Health:** http://localhost:8000/health  
+- **ML status:** http://localhost:8000/ml-status  
+
+**Key endpoints (Swagger):**
+- [Create patient](http://localhost:8000/docs#/patients/create_patient_patients_post) — `POST /patients`
+- [Upload scan & predict](http://localhost:8000/docs#/scans/upload_scan_image_with_prediction) — `POST /scans/upload` (patient_id + file)  
+
+### Step 4: Run the Flutter App
 
 ```bash
 cd app
 flutter pub get
-flutter run
+flutter run -d chrome    # Web
+# or
+flutter run              # Default device (iOS/Android)
 ```
 
-For Android emulator, the backend is at `10.0.2.2:8000`. Set when building:
+**Android emulator:** Backend is at `10.0.2.2:8000`:
 ```bash
-cd app && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 ```
 
-## Demo Login
+---
 
-1. Tap **Register** and create an account (name, email, password)
-2. Tap **Login** and enter your email and password
-3. Backend must be running at `http://localhost:8000` (or configured URL)
+## Project Structure
 
-## Responsive Design
+```
+CarotidCheck app/
+├── app/                    # Flutter frontend
+│   ├── lib/
+│   │   ├── core/           # Config, models, router, services, theme
+│   │   └── screens/        # Login, dashboard, scan, result, referral, etc.
+│   ├── assets/             # Logo, images
+│   └── pubspec.yaml
+├── backend/                # FastAPI backend
+│   ├── main.py             # App entry, /health, /ml-status
+│   ├── inference.py        # Swin-UNETR inference, overlay generation
+│   ├── routers/            # auth, patients, scans
+│   ├── models/             # User, Patient, Scan, Result, Hospital
+│   ├── requirements.txt    # Full ML stack (PyTorch, MONAI, OpenCV)
+│   └── requirements-api.txt # API only, no ML (~50 MB)
+├── ML/                     # Models and training
+│   ├── models/             # carotid_swin_unetr_2d.pt (place model here)
+│   └── carotid/            # Training scripts
+├── data/                   # SQLite DB (created on first run)
+└── README.md
+```
 
-- **Phones**: Compact padding (16px), scrollable content
-- **Tablets**: Wider padding (24–32px), max-width 600px for readability
-- **Orientations**: Portrait and landscape supported
-- **SafeArea**: Respects notches and system UI
+---
 
-## Tech Stack
+## Core Functionality
 
-- Flutter 3.x
-- go_router, Provider
-- flutter_secure_storage
-- connectivity_plus
-- image_picker, camera, signature
-- Simple email/password auth
-- **google_mlkit_text_recognition** (Rwandan NID OCR)
-- **flutter_map** (OpenStreetMap – no API key)
+| Feature | Description |
+|---------|-------------|
+| **Patient registration** | Create patients with identifier (e.g. CC-0001) |
+| **Carotid scan upload** | Camera or gallery → upload to backend |
+| **AI analysis** | IMT (mm), risk level (Low/Moderate/High), plaque detection |
+| **Segmentation overlay** | Green overlay on scan (when ML model is loaded) |
+| **Referrals** | High-risk patients → referral list, hospital map |
+| **Hospital dashboard** | High-risk referrals, analyses, quick actions |
+| **Role-based dashboards** | CHW, Clinician, Admin views |
+
+---
 
 ## Configuration
 
-### Maps
+### Backend
 
-Uses **OpenStreetMap** via `flutter_map` – **no API key required**. The map shows Gasabo District Hospital. "Get Directions" opens Google Maps in the browser.
+- **DATABASE_URL** — Default: `sqlite:///data/carotidcheck.db`. For prod: PostgreSQL.
+- **SECRET_KEY** — JWT signing. Default dev key; set in prod: `openssl rand -hex 32`
+- **DISABLE_AUTH** — Set `1` for local testing without login
+
+### Frontend
+
+- **API_BASE_URL** — Default: `http://localhost:8000`. Override via `--dart-define=API_BASE_URL=...`
+
+---
+
+## Deployment
+
+### Backend (e.g. Render, Railway, Fly.io)
+
+1. Set env vars: `SECRET_KEY`, `DATABASE_URL` (PostgreSQL)
+2. Start: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+3. Ensure `ML/models/carotid_swin_unetr_2d.pt` is available for real AI overlay
+
+### Flutter Web
+
+```bash
+cd app
+flutter build web
+# Deploy the build/web/ folder to Firebase Hosting, Vercel, Netlify, etc.
+```
+
+### Android APK
+
+```bash
+cd app
+flutter build apk --release
+# Output: build/app/outputs/flutter-apk/app-release.apk
+```
+
+---
+
+## Demo Video
+
+A 5-minute demo video should cover:
+
+1. **Onboarding** (brief)
+2. **Patient creation** — New patient, identifier
+3. **Scan capture** — Camera/gallery, upload
+4. **Analysis result** — IMT, risk level, overlay (if available)
+5. **Referrals** — Add to referral list, view hospitals
+6. **Hospital dashboard** — High-risk cases, analyses
+7. **Settings** — Language, analyses, patients
+
+---
+
+## Tech Stack
+
+- **Frontend:** Flutter, go_router, Provider, image_picker, flutter_map
+- **Backend:** FastAPI, SQLAlchemy, Pydantic v2, JWT
+- **ML:** PyTorch, MONAI (Swin-UNETR), OpenCV
+
+---
+
+## License
+
+[Add your license]

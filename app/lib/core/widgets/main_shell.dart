@@ -26,19 +26,9 @@ class MainShell extends StatelessWidget {
             label: l10n.t('home'),
           ),
           NavigationDestination(
-            icon: const Icon(Icons.analytics_outlined),
-            selectedIcon: const Icon(Icons.analytics),
-            label: l10n.t('analyses'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.people_outline),
-            selectedIcon: const Icon(Icons.people),
-            label: l10n.t('patients'),
-          ),
-          NavigationDestination(
             icon: const Icon(Icons.local_hospital_outlined),
             selectedIcon: const Icon(Icons.local_hospital),
-            label: l10n.t('referrals'),
+            label: l10n.t('hospitalDashboard'),
           ),
           NavigationDestination(
             icon: const Icon(Icons.settings_outlined),

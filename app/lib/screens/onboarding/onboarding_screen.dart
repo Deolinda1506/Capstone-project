@@ -125,52 +125,7 @@ class _IntroPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Large circular image + smaller logo overlay (like reference)
-          Stack(
-            alignment: Alignment.bottomLeft,
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey.shade200,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryBlue.withOpacity(0.3),
-                      blurRadius: 24,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: AppLogo(
-                  height: 80,
-                  color: AppTheme.primaryBlue.withOpacity(0.9),
-                ),
-              ),
-              Positioned(
-                left: 16,
-                bottom: 16,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppTheme.primaryBlue,
-                    border: Border.all(color: Colors.white, width: 3),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: AppLogo(
-                      height: 40,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const AppLogo(height: 140),
           const SizedBox(height: 40),
           Builder(
             builder: (context) {

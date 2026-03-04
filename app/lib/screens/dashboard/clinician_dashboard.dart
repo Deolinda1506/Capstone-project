@@ -4,7 +4,6 @@ import '../../core/l10n/l10n_extension.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/sync_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/sync_status_indicator.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/responsive_layout.dart';
@@ -35,7 +34,6 @@ class ClinicianDashboard extends StatelessWidget {
           ],
         ),
         actions: [
-          SyncStatusIndicator(syncService: syncService, showLabel: false),
           navNextButton(context),
         ],
       ),
@@ -61,6 +59,14 @@ class ClinicianDashboard extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 32),
+              _ActionCard(
+                icon: Icons.dashboard,
+                title: context.l10n.t('hospitalDashboard'),
+                subtitle: context.l10n.t('incomingReferrals'),
+                color: AppTheme.riskHigh,
+                onTap: () => context.go('/hospital-dashboard'),
+              ),
+              const SizedBox(height: 24),
               _SectionTitle(title: context.l10n.t('reviewValidation')),
               const SizedBox(height: 12),
               _ActionCard(
