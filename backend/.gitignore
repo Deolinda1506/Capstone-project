@@ -1,0 +1,15 @@
+# Local database and env
+data/
+.env
+**/.env
+.venv/
+env/
+*.db
+strokelink.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*firebase-key.json
+ML/models/*.pt

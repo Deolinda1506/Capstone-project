@@ -1,0 +1,149 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/models/user_model.dart';
+import '../../core/services/sync_service.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/l10n/l10n_extension.dart';
+import '../../core/widgets/sync_status_indicator.dart';
+import '../../core/widgets/app_logo.dart';
+import '../../core/widgets/nav_buttons.dart';
+import '../../core/widgets/responsive_layout.dart';
+
+/// Level 1: CHW - Simplified UI
+/// Focus: Scan → Result (Color) → Refer
+/// Only sees patients in their village
+class ChwDashboard extends StatelessWidget {
+  final UserModel user;
+  final SyncService syncService;
+
+  const ChwDashboard({
+    super.key,
+    required this.user,
+    required this.syncService,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: navBackButton(context),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const AppLogo(height: 36, showInAppBar: true),
+            const SizedBox(width: 8),
+            Text(context.l10n.t('appName')),
+          ],
+        ),
+        actions: [
+          SyncStatusIndicator(syncService: syncService, showLabel: false),
+          navNextButton(context),
+        ],
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: responsivePadding(context),
+          child: ResponsiveContainer(
+            maxWidth: 600,
+            padding: EdgeInsets.zero,
+            child: Builder(
+              builder: (context) {
+              final l10n = context.l10n;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.t('welcome', {'name': user.fullName ?? 'CHW'}),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  if (user.healthCenter != null)
+                    Text(
+                      user.healthCenter!.displayAddress,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                    ),
+                  const SizedBox(height: 32),
+                  _QuickActionCard(
+                    icon: Icons.person_add,
+                    title: l10n.t('newPatient'),
+                    subtitle: l10n.t('newPatientSubtitle'),
+                    color: AppTheme.primaryBlue,
+                    onTap: () => context.push('/patient/capture'),
+                  ),
+                  const SizedBox(height: 16),
+                  _QuickActionCard(
+                    icon: Icons.document_scanner,
+                    title: l10n.t('scan'),
+                    subtitle: l10n.t('scanSubtitle'),
+                    color: AppTheme.accentTeal,
+                    onTap: () => context.push('/scan'),
+                  ),
+                  const SizedBox(height: 16),
+                  _QuickActionCard(
+                    icon: Icons.analytics,
+                    title: l10n.t('analyses'),
+                    subtitle: l10n.t('analysesSubtitle'),
+                    color: AppTheme.primaryBlue,
+                    onTap: () => context.go('/analyses'),
+                  ),
+                  const SizedBox(height: 16),
+                  _QuickActionCard(
+                    icon: Icons.assignment,
+                    title: l10n.t('myPatients'),
+                    subtitle: l10n.t('myPatientsSubtitle'),
+                    color: Colors.blue,
+                    onTap: () => context.go('/patients'),
+                  ),
+                  const SizedBox(height: 16),
+                  _QuickActionCard(
+                    icon: Icons.local_hospital,
+                    title: l10n.t('referrals'),
+                    subtitle: l10n.t('referralsSubtitle'),
+                    color: AppTheme.riskModerate,
+                    onTap: () => context.go('/referrals'),
+                  ),
+                ],
+              );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(0.2),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: onTap,
+      ),
+    );
+  }
+}
