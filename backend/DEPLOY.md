@@ -2,6 +2,48 @@
 
 Yes, you can deploy the backend. Follow this checklist.
 
+---
+
+## Render (recommended)
+
+### One-click Blueprint
+
+1. Push your repo to GitHub (e.g. `https://github.com/Deolinda1506/Capstone-project`).
+2. Go to [Render Dashboard → Blueprints](https://dashboard.render.com/blueprints).
+3. Click **New Blueprint Instance** and connect your GitHub repo.
+4. Render will detect `render.yaml` and create:
+   - A **PostgreSQL** database (free tier)
+   - A **Web Service** for the API
+5. After deploy, your API is live at `https://carotidcheck-api.onrender.com` (or similar).
+
+### What the Blueprint does
+
+- **Build**: `pip install -r backend/requirements-api.txt` (lightweight, ~50 MB)
+- **Start**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+- **Env vars**: `DATABASE_URL` (from Postgres), `SECRET_KEY` (auto-generated), `DISABLE_AUTH=0`
+
+### ML model (optional)
+
+The Blueprint uses `requirements-api.txt` (no PyTorch/MONAI) so it fits Render’s free tier. Auth, patients, and scans work; `/predict` and AI overlay return stub results.
+
+To enable full ML on a paid plan:
+
+1. In Render Dashboard → your service → **Settings** → change **Build Command** to: `pip install -r backend/requirements.txt`.
+2. Add the model file `ML/models/carotid_swin_unetr_2d.pt` to your repo (or fetch it at build time). Allocate at least 2GB RAM for the service.
+
+### Flutter app
+
+Build with your Render API URL:
+
+```bash
+cd app
+flutter build web --dart-define=API_BASE_URL=https://YOUR-SERVICE.onrender.com
+```
+
+Or for mobile: `flutter build apk --dart-define=API_BASE_URL=https://YOUR-SERVICE.onrender.com`
+
+---
+
 ## 1. Production environment variables
 
 Set these on your host or platform:

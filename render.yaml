@@ -10,6 +10,7 @@ services:
     name: carotidcheck-api
     runtime: python
     plan: free
+    # If repo root is parent of "CarotidCheck app", set rootDir in Render Dashboard → Service → Settings → Root Directory: "CarotidCheck app"
 
     buildCommand: pip install -r backend/requirements-api.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
