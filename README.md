@@ -198,11 +198,18 @@ flutter build web
 
 ### Android APK
 
+**Build:**
 ```bash
 cd app
-flutter build apk --release
-# Output: build/app/outputs/flutter-apk/app-release.apk
+flutter build apk --release --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
+# Output: app/build/app/outputs/flutter-apk/app-release.apk
 ```
+
+**Install on Android device:**
+1. Transfer `app-release.apk` to your phone (USB, email, cloud drive, or download from a release).
+2. On your Android device: **Settings → Security** → enable **Install from unknown sources** (or **Install unknown apps** for the file manager/browser you use).
+3. Open the APK file and tap **Install**.
+4. The APK built with the command above has the deployed API URL (`https://carotidcheck-api.onrender.com`) compiled in via `--dart-define`.
 
 ---
 
