@@ -44,9 +44,9 @@ dependencies:
 
   # Camera & image (OCR placeholder, scan capture)
   image_picker: ^1.1.2
-  camera: ^0.11.0+2
 
   # UI & forms
+  google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
   signature: ^5.4.1
   intl: ^0.20.2
@@ -78,7 +78,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/logo.png"
-  adaptive_icon_background: "#1565C0"
+  adaptive_icon_background: "#0D47A1"
   adaptive_icon_foreground: "assets/logo.png"
 
 # For information on the generic Dart part of this file, see the
@@ -96,6 +96,7 @@ flutter:
     - assets/logo.png
     - assets/logo_carotid.png
     - assets/logo_carotid.svg
+    - assets/logo_carotidcheck.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

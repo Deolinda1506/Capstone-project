@@ -6,6 +6,7 @@ import '../../core/models/user_role.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/referral_list_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/theme_provider.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/nav_buttons.dart';
 import '../../core/l10n/app_localizations.dart';
@@ -52,6 +53,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SettingsSection(
             title: l10n.t('preferences'),
             children: [
+              ListTile(
+                leading: const Icon(Icons.dark_mode_outlined),
+                title: Text(l10n.t('theme')),
+                subtitle: Text(l10n.t('themeSubtitle')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showThemePicker(context),
+              ),
               if (auth.currentUser?.role == UserRole.clinician || auth.currentUser?.role == UserRole.admin)
                 ListTile(
                   leading: const Icon(Icons.local_hospital),
@@ -109,6 +117,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: l10n.t('information'),
             children: [
               ListTile(
+                leading: const Icon(Icons.help_outline),
+                title: Text(l10n.t('help')),
+                subtitle: Text(l10n.t('faq')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showHelp(context),
+              ),
+              ListTile(
                 leading: const Icon(Icons.info_outline),
                 title: Text(l10n.t('aboutCarotidCheck')),
                 trailing: const Icon(Icons.chevron_right),
@@ -138,6 +153,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _showThemePicker(BuildContext context) {
+    final themeProvider = context.read<ThemeProvider>();
+    final current = themeProvider.themeMode;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(context.l10n.t('theme'), style: Theme.of(context).textTheme.titleMedium),
+            ),
+            ListTile(
+              leading: Icon(Icons.light_mode, color: current == ThemeMode.light ? AppTheme.primaryBlue : null),
+              title: Text(context.l10n.t('themeLight')),
+              trailing: current == ThemeMode.light ? const Icon(Icons.check_circle) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.light);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.dark_mode, color: current == ThemeMode.dark ? AppTheme.primaryBlue : null),
+              title: Text(context.l10n.t('themeDark')),
+              trailing: current == ThemeMode.dark ? const Icon(Icons.check_circle) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.dark);
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.brightness_auto, color: current == ThemeMode.system ? AppTheme.primaryBlue : null),
+              title: Text(context.l10n.t('themeSystem')),
+              trailing: current == ThemeMode.system ? const Icon(Icons.check_circle) : null,
+              onTap: () {
+                themeProvider.setThemeMode(ThemeMode.system);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -173,12 +234,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showAbout(BuildContext context) {
+    final l10n = context.l10n;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
         expand: false,
         builder: (context, scrollController) => SafeArea(
           child: Column(
@@ -187,7 +249,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Text(context.l10n.t('aboutCarotidCheck'), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(l10n.t('aboutCarotidCheck'), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                     const Spacer(),
                     IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                   ],
@@ -204,11 +266,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Center(child: AppLogo(height: 80)),
                       const SizedBox(height: 24),
                       Text(
-                        context.l10n.t('meetCarotidCheck'),
+                        l10n.t('meetCarotidCheck'),
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      Text(context.l10n.t('meetCarotidCheckDesc')),
+                      Text(l10n.t('meetCarotidCheckDesc')),
+                      const SizedBox(height: 24),
+                      Text(
+                        l10n.t('teamSection'),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryBlue,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(l10n.t('teamDesc')),
+                      const SizedBox(height: 20),
+                      Text(
+                        l10n.t('acknowledgments'),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryBlue,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(l10n.t('acknowledgmentsDesc')),
                       const SizedBox(height: 24),
                       Text(
                         'Version 1.0.0',
@@ -216,6 +298,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ],
                   ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showHelp(BuildContext context) {
+    final l10n = context.l10n;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Text(l10n.t('help'), style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    _FaqItem(question: l10n.t('faqWhatIsImt'), answer: l10n.t('faqWhatIsImtAnswer')),
+                    const SizedBox(height: 16),
+                    _FaqItem(question: l10n.t('faqWhatToDoHighRisk'), answer: l10n.t('faqWhatToDoHighRiskAnswer')),
+                    const SizedBox(height: 16),
+                    _FaqItem(question: l10n.t('faqScanQuality'), answer: l10n.t('faqScanQualityAnswer')),
+                    const SizedBox(height: 16),
+                    _FaqItem(question: l10n.t('faqDataStored'), answer: l10n.t('faqDataStoredAnswer')),
+                  ],
                 ),
               ),
             ],
@@ -272,6 +399,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _FaqItem extends StatelessWidget {
+  final String question;
+  final String answer;
+
+  const _FaqItem({required this.question, required this.answer});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryBlue.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.help_outline, size: 20, color: AppTheme.primaryBlue),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  question,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryBlue,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(answer, style: Theme.of(context).textTheme.bodyMedium),
+        ],
       ),
     );
   }

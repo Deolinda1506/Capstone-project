@@ -31,6 +31,14 @@ To enable full ML on a paid plan:
 1. In Render Dashboard → your service → **Settings** → change **Build Command** to: `pip install -r backend/requirements.txt`.
 2. Add the model file `ML/models/carotid_swin_unetr_2d.pt` to your repo (or fetch it at build time). Allocate at least 2GB RAM for the service.
 
+### Render free tier: slow first request (cold start)
+
+Render free tier services **spin down after ~15 min of inactivity**. The first request can take **1–2 minutes** to wake up. To reduce this:
+
+1. **Keep-alive ping** — Use [UptimeRobot](https://uptimerobot.com) (free) to ping `https://your-api.onrender.com/health` every 5–10 minutes.
+2. **Render Cron Job** — Add a cron job that hits `/health` every 10 min.
+3. **Upgrade** — Paid plans don't spin down.
+
 ### Flutter app
 
 Build with your Render API URL:
@@ -51,7 +59,8 @@ Set these on your host or platform:
 - **SECRET_KEY** — required in prod. Generate: `openssl rand -hex 32`
 - **DATABASE_URL** — use PostgreSQL in prod, e.g. `postgresql://user:pass@host:5432/carotidcheck`
 - Optional: **SMTP_HOST**, **SMTP_PORT**, **SMTP_USER**, **SMTP_PASSWORD**, **EMAIL_FROM** (for welcome/referral emails)
-- Optional: **AFRICAS_TALKING_*** (for SMS alerts when high-risk)
+- Optional: **AFRICAS_TALKING_USERNAME**, **AFRICAS_TALKING_API_KEY**, **AFRICAS_TALKING_CLINICIAN_PHONES** (for SMS alerts when high-risk and CHW ID delivery)
+- Optional: **APPROVAL_CODES** — district approval codes to restrict registration (format: `0102:gasabo2024,0101:nyarugenge2024`). Only CHWs with the correct code from their supervisor can register for that district.
 
 ## 2. ML model
 
@@ -75,6 +84,18 @@ You can deploy the same image or run uvicorn directly on:
 - **AWS ECS, Google Cloud Run** — use the Dockerfile; allocate enough memory (e.g. 2GB) for the ML model
 - **VPS** — clone repo, `pip install -r backend/requirements.txt`, run uvicorn with a process manager (systemd, supervisor)
 
-## 5. CORS
+## 5. Database schema (phone column)
+
+If you have an existing database, add the `phone` column for CHW registration and duplicate prevention:
+
+```sql
+-- PostgreSQL
+ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+CREATE INDEX ix_users_phone ON users(phone);
+
+-- If column already exists, you may see an error; that's fine.
+```
+
+## 6. CORS
 
 The API currently allows all origins (`allow_origins=["*"]`). For production you may want to restrict this to your app’s domain(s) in `backend/main.py`.

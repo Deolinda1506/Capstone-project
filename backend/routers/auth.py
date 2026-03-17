@@ -22,8 +22,41 @@ from backend.schemas.user import (
 )
 from backend.jwt_utils import create_access_token
 from backend import email_service
+from backend import sms_alerts
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _normalize_phone(phone: str | None) -> str | None:
+    """Normalize to E.164 for Rwanda (+250...)."""
+    if not phone or not isinstance(phone, str):
+        return None
+    digits = "".join(c for c in phone if c.isdigit())
+    if len(digits) < 9:
+        return None
+    if digits.startswith("250") and len(digits) >= 12:
+        return "+" + digits[:12]
+    if digits.startswith("0") and len(digits) >= 10:
+        return "+250" + digits[1:10]
+    if len(digits) == 9 and digits[0] == "7":
+        return "+250" + digits
+    return "+250" + digits[-9:] if len(digits) >= 9 else None
+
+
+def _get_approval_codes() -> dict[str, str]:
+    """Parse APPROVAL_CODES env (format: 0102:code1,0101:code2). Returns {} if not set."""
+    raw = os.getenv("APPROVAL_CODES", "").strip()
+    if not raw:
+        return {}
+    result = {}
+    for part in raw.split(","):
+        part = part.strip()
+        if ":" in part:
+            district, code = part.split(":", 1)
+            result[district.strip()] = code.strip()
+    return result
+
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -80,13 +113,41 @@ def register(
     body: RegisterRequest,
     db: Annotated[Session, Depends(get_db)],
 ):
-    """Registration: name, district, password. Assigns unique District ID. No email required."""
+    """Registration: name, district, password. Assigns unique ID. Optional phone/email for ID delivery."""
     district = body.district_id or body.facility
     if not district:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="District is required",
         )
+    # District approval code: if APPROVAL_CODES env is set, require matching code
+    approval_codes = _get_approval_codes()
+    if approval_codes:
+        expected = approval_codes.get(district)
+        provided = (body.approval_code or "").strip()
+        if not expected:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Registration for this district is not open. Contact your supervisor.",
+            )
+        if provided != expected:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid approval code. Get the code from your district supervisor.",
+            )
+    phone = _normalize_phone(body.phone) if body.phone else None
+    email_for_send = (body.email or "").strip() if body.email and "@" in (body.email or "") else None
+
+    # Duplicate check: if phone provided and already registered, send ID and reject
+    if phone:
+        existing = db.query(User).filter(User.phone == phone, User.is_deleted == False).first()
+        if existing and existing.staff_id:
+            sms_alerts.send_chw_id_sms(phone, existing.staff_id)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"You already have an account. Your ID is {existing.staff_id}. We've sent it to your phone.",
+            )
+
     count = db.query(User).filter(User.facility == district).count()
     assigned_id = f"{district}-{count + 1:03d}"
     email = f"{assigned_id}@carotidcheck.local"  # Internal placeholder (DB requires unique email)
@@ -98,11 +159,19 @@ def register(
         role=body.role or "chw",
         staff_id=assigned_id,
         facility=district,
+        phone=phone,
         status="approved",
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # Send ID via SMS and/or email
+    if phone:
+        sms_alerts.send_chw_id_sms(phone, assigned_id)
+    if email_for_send:
+        email_service.send_chw_id_email(email_for_send, assigned_id)
+
     token = create_access_token(subject=user.id)
     return TokenResponse(access_token=token, user=_user_response(user, db))
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// CarotidCheck logo - vascular/medical branding
+/// CarotidCheck logo - vascular/medical branding with CAROTIDCHECK text
 class AppLogo extends StatelessWidget {
   final double height;
   final bool showInAppBar;
@@ -18,7 +18,7 @@ class AppLogo extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppLogo(height: logoHeight, showInAppBar: true),
+        AppLogo(height: logoHeight, showInAppBar: true, color: Colors.white),
         const SizedBox(width: 8),
         Flexible(
           child: Text(
@@ -33,14 +33,18 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      'assets/logo_carotid.png',
+    final image = Image.asset(
+      'assets/logo_carotidcheck.png',
       height: height,
       width: height * 1.2,
       fit: BoxFit.contain,
-      color: color,
-      colorBlendMode: color != null ? BlendMode.srcIn : null,
-      errorBuilder: (_, __, ___) => Icon(Icons.medical_services, size: height, color: color),
     );
+    if (color != null) {
+      return ColorFiltered(
+        colorFilter: ColorFilter.mode(color!, BlendMode.srcIn),
+        child: image,
+      );
+    }
+    return image;
   }
 }

@@ -104,6 +104,25 @@ def send_password_reset_email(to_email: str, reset_link_or_token: str) -> bool:
     return _send(to_email, subject, text)
 
 
+def send_chw_id_email(to_email: str, staff_id: str) -> bool:
+    """
+    Send CHW their unique ID via email after registration.
+    Returns True if sent, False if email disabled or send failed.
+    """
+    if not to_email or "@" not in to_email:
+        return False
+    subject = "CarotidCheck – Your Login ID"
+    text = (
+        f"Hello,\n\n"
+        f"You have registered for CarotidCheck.\n\n"
+        f"Your unique login ID is: {staff_id}\n\n"
+        f"Use this ID with your password to sign in. Keep this email for your records.\n\n"
+        f"If you did not register, please contact your supervisor.\n\n"
+        f"— CarotidCheck Team"
+    )
+    return _send(to_email, subject, text)
+
+
 def send_referral_email(patient, imt_mm: float, risk_level: str) -> None:
     """
     Send email to patient when they are referred to hospital (high-risk result).

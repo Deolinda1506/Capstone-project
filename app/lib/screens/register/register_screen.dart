@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/district_constants.dart';
@@ -8,7 +9,7 @@ import '../../core/widgets/responsive_layout.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 
-/// Registration: name, district, password. Community workers login with District ID.
+/// Registration: name, district, approval code, password. Optional phone for SMS ID delivery.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -20,6 +21,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _approvalCodeController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   bool _obscurePassword = true;
   DistrictOption? _selectedDistrict;
 
@@ -27,6 +31,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _passwordController.dispose();
+    _approvalCodeController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -45,22 +52,69 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final authService = context.read<AuthService>();
+    final approvalCode = _approvalCodeController.text.trim();
+    final phone = _phoneController.text.trim();
+    final email = _emailController.text.trim();
     final result = await authService.registerWithId(
       _passwordController.text,
       _nameController.text.trim(),
       districtId: _selectedDistrict!.idCode,
+      approvalCode: approvalCode.isEmpty ? null : approvalCode,
+      phone: phone.isEmpty ? null : phone,
+      email: email.isEmpty ? null : email,
     );
     if (result != null && mounted) {
-      final l10n = context.l10n;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.t('accountCreated', {'id': result})),
-          backgroundColor: AppTheme.primaryBlue,
-          duration: const Duration(seconds: 6),
-        ),
-      );
-      context.pop();
+      _showSuccessDialog(result, phone.isNotEmpty);
     }
+  }
+
+  void _showSuccessDialog(String id, bool sentToPhone) {
+    final l10n = context.l10n;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.t('createAccount')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.t('accountCreated', {'id': id})),
+            if (sentToPhone) ...[
+              const SizedBox(height: 12),
+              Text(
+                l10n.t('idSentToPhone'),
+                style: TextStyle(
+                  color: AppTheme.accentTeal,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: id));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${l10n.t('copyId')}: $id')),
+                );
+              }
+            },
+            icon: const Icon(Icons.copy),
+            label: Text(l10n.t('copyId')),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/login');
+            },
+            child: Text(l10n.t('goToLogin')),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -138,6 +192,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   builder: (context) {
                     final l10n = context.l10n;
                     return TextFormField(
+                      controller: _approvalCodeController,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('approvalCode'),
+                        hintText: l10n.t('approvalCodeHint'),
+                        prefixIcon: const Icon(Icons.vpn_key_outlined),
+                        helperText: l10n.t('approvalCodeHelper'),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                Builder(
+                  builder: (context) {
+                    final l10n = context.l10n;
+                    return TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('phone'),
+                        hintText: l10n.t('phoneHint'),
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        helperText: l10n.t('phoneOptionalHint'),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                Builder(
+                  builder: (context) {
+                    final l10n = context.l10n;
+                    return TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: l10n.t('emailOptional'),
+                        hintText: l10n.t('emailHint'),
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        helperText: l10n.t('emailOptionalHint'),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                Builder(
+                  builder: (context) {
+                    final l10n = context.l10n;
+                    return TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
@@ -164,31 +265,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: Theme.of(context).colorScheme.errorContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       authService.error!,
-                      style: TextStyle(color: Colors.red[700], fontSize: 13),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer, fontSize: 13),
                     ),
                   ),
                 ],
                 const SizedBox(height: 32),
-                Builder(
-                  builder: (context) {
-                    final l10n = context.l10n;
-                    return FilledButton(
-                      onPressed: authService.isLoading ? null : _onSubmit,
-                      child: authService.isLoading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(l10n.t('createAccount')),
-                    );
-                  },
-                ),
+                if (authService.isLoading) ...[
+                  Center(
+                    child: Column(
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(
+                          context.l10n.t('registering'),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          context.l10n.t('registeringSlowHint'),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else
+                  FilledButton(
+                    onPressed: _onSubmit,
+                    child: Text(context.l10n.t('createAccount')),
+                  ),
               ],
             ),
           ),

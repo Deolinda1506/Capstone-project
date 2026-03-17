@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/models/patient_model.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/responsive_layout.dart';
 
@@ -122,15 +123,30 @@ class _ScanScreenState extends State<ScanScreen> {
             children: [
               if (widget.patient != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.primaryBlue.withOpacity(0.08),
+                        AppTheme.accentTeal.withOpacity(0.06),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.15)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.person),
-                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.person_outline, color: AppTheme.primaryBlue, size: 24),
+                      ),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,6 +189,31 @@ class _ScanScreenState extends State<ScanScreen> {
                       color: Colors.grey[600],
                     ),
               ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentTeal.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.accentTeal.withOpacity(0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.tips_and_updates_outlined, color: AppTheme.accentTeal, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        context.l10n.t('scanInstructions'),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.accentTeal,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
               if (_imageBytes != null)
                 ClipRRect(
@@ -188,13 +229,21 @@ class _ScanScreenState extends State<ScanScreen> {
                 Container(
                   height: 200,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppTheme.accentTeal.withOpacity(0.08),
+                        AppTheme.primaryBlue.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.accentTeal.withOpacity(0.2)),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_a_photo, size: 48, color: Colors.grey[600]),
+                      Icon(Icons.monitor_heart, size: 56, color: AppTheme.accentTeal.withOpacity(0.7)),
                       const SizedBox(height: 8),
                       Text(
                         context.l10n.t('noImageCaptured'),

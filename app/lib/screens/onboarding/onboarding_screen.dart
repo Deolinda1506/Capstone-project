@@ -19,7 +19,12 @@ Future<void> setOnboardingComplete() async {
   await prefs.setBool(_keyOnboardingComplete, true);
 }
 
-/// Onboarding: Page 1 = Logo, Page 2 = Intro (Meet CarotidCheck style)
+Future<void> clearOnboardingComplete() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove(_keyOnboardingComplete);
+}
+
+/// Onboarding: Page 1 = Logo, Page 2 = How it works, Page 3 = Intro (Meet CarotidCheck)
 class OnboardingScreen extends StatefulWidget {
   final AuthService authService;
   final SyncService syncService;
@@ -36,6 +41,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
+  int _currentPage = 0;
 
   Future<void> _complete() async {
     await setOnboardingComplete();
@@ -50,19 +56,72 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      body: SafeArea(
-        child: PageView(
-          controller: _pageController,
-          children: [
-            _LogoPage(
-              onNext: () => _pageController.nextPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
+                : [const Color(0xFF0D47A1), const Color(0xFF1565C0)],
+          ),
+        ),
+        child: SafeArea(
+          child: Stack(
+            children: [
+              PageView(
+                controller: _pageController,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                children: [
+                  _LogoPage(
+                    onNext: () => _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    ),
+                  ),
+                  _PurposePage(
+                    onNext: () => _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    ),
+                  ),
+                  _IntroPage(onComplete: _complete),
+                ],
               ),
-            ),
-            _IntroPage(onComplete: _complete),
-          ],
+              if (_currentPage < 2)
+                Positioned(
+                  top: 8,
+                  right: 16,
+                  child: TextButton(
+                    onPressed: _complete,
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                    child: Text(context.l10n.t('skip')),
+                  ),
+                ),
+              Positioned(
+                bottom: 24,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(3, (i) {
+                    final active = i == _currentPage;
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: active ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: active ? Colors.white : Colors.white38,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -77,19 +136,78 @@ class _LogoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.fromLTRB(40, 40, 40, 56),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const AppLogo(height: 140),
-          const SizedBox(height: 32),
-          Text(
-            'CarotidCheck',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+          const AppLogo(height: 140, color: Colors.white),
+          const SizedBox(height: 16),
+          Builder(
+            builder: (context) => Text(
+              context.l10n.t('tagline'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w500,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 40),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: onNext,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-            textAlign: TextAlign.center,
+              ),
+              child: Text(context.l10n.t('next')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PurposePage extends StatelessWidget {
+  final VoidCallback onNext;
+
+  const _PurposePage({required this.onNext});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 28, 28, 56),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.health_and_safety, size: 80, color: Colors.white),
+          const SizedBox(height: 32),
+          Builder(
+            builder: (context) => Text(
+              context.l10n.t('onboardingPurposeTitle'),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Builder(
+            builder: (context) => Text(
+              context.l10n.t('onboardingPurposeDesc'),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Colors.white70,
+                    height: 1.5,
+                  ),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 40),
           SizedBox(
@@ -121,20 +239,20 @@ class _IntroPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding: const EdgeInsets.fromLTRB(28, 28, 28, 56),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const AppLogo(height: 140),
-          const SizedBox(height: 40),
+          const AppLogo(height: 140, color: Colors.white),
+          const SizedBox(height: 24),
           Builder(
             builder: (context) {
               final l10n = context.l10n;
-              return Text(
+                return Text(
                 l10n.t('meetCarotidCheck'),
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: Colors.white,
                     ),
                 textAlign: TextAlign.center,
               );
@@ -147,7 +265,7 @@ class _IntroPage extends StatelessWidget {
               return Text(
                 l10n.t('meetCarotidCheckDesc'),
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: Colors.white70,
                       height: 1.5,
                     ),
                 textAlign: TextAlign.center,

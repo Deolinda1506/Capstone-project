@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/nav_buttons.dart';
+import '../../core/widgets/quick_action_card.dart';
 import '../../core/widgets/responsive_layout.dart';
 
 /// Level 1: CHW - Simplified UI
@@ -56,6 +57,14 @@ class ChwDashboard extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.t('tagline'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.accentTeal,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
                   if (user.healthCenter != null)
                     Text(
                       user.healthCenter!.displayAddress,
@@ -63,41 +72,41 @@ class ChwDashboard extends StatelessWidget {
                             color: Colors.grey[600],
                           ),
                     ),
-                  const SizedBox(height: 32),
-                  _QuickActionCard(
-                    icon: Icons.person_add,
+                  const SizedBox(height: 28),
+                  QuickActionCard(
+                    icon: Icons.person_add_alt_1,
                     title: l10n.t('newPatient'),
                     subtitle: l10n.t('newPatientSubtitle'),
                     color: AppTheme.primaryBlue,
                     onTap: () => context.push('/patient/capture'),
                   ),
-                  const SizedBox(height: 16),
-                  _QuickActionCard(
-                    icon: Icons.document_scanner,
+                  const SizedBox(height: 14),
+                  QuickActionCard(
+                    icon: Icons.monitor_heart,
                     title: l10n.t('scan'),
                     subtitle: l10n.t('scanSubtitle'),
                     color: AppTheme.accentTeal,
                     onTap: () => context.push('/scan'),
                   ),
-                  const SizedBox(height: 16),
-                  _QuickActionCard(
-                    icon: Icons.analytics,
+                  const SizedBox(height: 14),
+                  QuickActionCard(
+                    icon: Icons.insights,
                     title: l10n.t('analyses'),
                     subtitle: l10n.t('analysesSubtitle'),
                     color: AppTheme.primaryBlue,
                     onTap: () => context.go('/analyses'),
                   ),
-                  const SizedBox(height: 16),
-                  _QuickActionCard(
-                    icon: Icons.assignment,
+                  const SizedBox(height: 14),
+                  QuickActionCard(
+                    icon: Icons.people_alt,
                     title: l10n.t('myPatients'),
                     subtitle: l10n.t('myPatientsSubtitle'),
-                    color: Colors.blue,
+                    color: AppTheme.softBlue,
                     onTap: () => context.go('/patients'),
                   ),
-                  const SizedBox(height: 16),
-                  _QuickActionCard(
-                    icon: Icons.local_hospital,
+                  const SizedBox(height: 14),
+                  QuickActionCard(
+                    icon: Icons.medical_services,
                     title: l10n.t('referrals'),
                     subtitle: l10n.t('referralsSubtitle'),
                     color: AppTheme.riskModerate,
@@ -114,34 +123,3 @@ class ChwDashboard extends StatelessWidget {
   }
 }
 
-class _QuickActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _QuickActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.2),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
-      ),
-    );
-  }
-}

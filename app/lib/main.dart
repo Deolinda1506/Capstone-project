@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/sync_service.dart';
 import 'core/l10n/locale_provider.dart';
@@ -23,6 +24,7 @@ class _CarotidCheckAppState extends State<CarotidCheckApp> {
   late final AuthService _authService;
   late final SyncService _syncService;
   late final LocaleProvider _localeProvider;
+  late final ThemeProvider _themeProvider;
 
   @override
   void initState() {
@@ -30,6 +32,7 @@ class _CarotidCheckAppState extends State<CarotidCheckApp> {
     _authService = AuthService();
     _syncService = SyncService();
     _localeProvider = LocaleProvider();
+    _themeProvider = ThemeProvider();
   }
 
   @override
@@ -45,9 +48,10 @@ class _CarotidCheckAppState extends State<CarotidCheckApp> {
         ChangeNotifierProvider.value(value: _authService),
         ChangeNotifierProvider.value(value: _syncService),
         ChangeNotifierProvider.value(value: _localeProvider),
+        ChangeNotifierProvider.value(value: _themeProvider),
       ],
-      child: Consumer<LocaleProvider>(
-        builder: (context, localeProvider, _) {
+      child: Consumer2<LocaleProvider, ThemeProvider>(
+        builder: (context, localeProvider, themeProvider, _) {
           // Material/Cupertino delegates don't support Kinyarwanda (rw).
           // Use 'en' as fallback for system widgets; our AppLocalizations still uses rw.
           final systemLocale = localeProvider.locale.languageCode == 'rw'
@@ -57,6 +61,8 @@ class _CarotidCheckAppState extends State<CarotidCheckApp> {
             title: 'CarotidCheck',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
             locale: systemLocale,
             supportedLocales: const [
               Locale('en'),

@@ -55,8 +55,18 @@ class AuthService extends ChangeNotifier {
     return id != null;
   }
 
-  /// Register and return assigned District ID (e.g. 0102-001) or null on failure.
-  Future<String?> registerWithId(String password, String fullName, {required String districtId}) async {
+  /// Register and return assigned CHW ID (e.g. 0102-001) or null on failure.
+  /// approvalCode: from district supervisor (required when backend has APPROVAL_CODES set).
+  /// Optional phone: sends ID via SMS and prevents duplicate accounts.
+  /// Optional email: sends ID via email.
+  Future<String?> registerWithId(
+    String password,
+    String fullName, {
+    required String districtId,
+    String? approvalCode,
+    String? phone,
+    String? email,
+  }) async {
     _error = null;
     _isLoading = true;
     notifyListeners();
@@ -73,6 +83,9 @@ class AuthService extends ChangeNotifier {
         password: password,
         displayName: fullName,
         districtId: districtId,
+        approvalCode: approvalCode?.trim().isEmpty ?? true ? null : approvalCode?.trim(),
+        phone: phone?.trim().isEmpty ?? true ? null : phone?.trim(),
+        email: email?.trim().isEmpty ?? true ? null : email?.trim(),
       );
 
       if (res.success && res.data != null) {

@@ -14,7 +14,8 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)  # For email/password login
     display_name = Column(String(255))
     role = Column(String(50), default="chw", nullable=False)  # admin | clinician | chw
-    staff_id = Column(String(128), nullable=True)  # Professional / national ID
+    staff_id = Column(String(128), nullable=True)  # Professional / national ID (e.g. 0102-001)
+    phone = Column(String(20), nullable=True, index=True)  # E.164 format for SMS, duplicate check
     facility = Column(String(255), nullable=True)  # Legacy / site name; prefer hospital.name
     hospital_id = Column(String(36), ForeignKey("hospitals.id"), nullable=True, index=True)  # Set when registered via hospital
     status = Column(String(20), default="approved", nullable=False)  # pending | approved

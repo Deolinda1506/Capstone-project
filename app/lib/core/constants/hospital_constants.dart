@@ -30,7 +30,7 @@ const List<HospitalInfo> districtHospitals = [
   HospitalInfo(
     name: 'Gasabo District Hospital',
     district: 'Gasabo',
-    address: 'Kacyiru, Gasabo, Kigali',
+    address: 'Kimironko, Gasabo, Kigali',
     lat: -1.9540,
     lng: 30.1120,
     phone: '+250 788 123 456',

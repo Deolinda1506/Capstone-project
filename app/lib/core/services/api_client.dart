@@ -112,12 +112,18 @@ class ApiClient {
     String? displayName,
     required String districtId,
     String role = 'chw',
+    String? approvalCode,
+    String? phone,
+    String? email,
   }) =>
       _request('POST', '/auth/register', body: {
         'password': password,
         'display_name': displayName,
         'district_id': districtId,
         'role': role,
+        if (approvalCode != null && approvalCode.isNotEmpty) 'approval_code': approvalCode,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        if (email != null && email.isNotEmpty) 'email': email,
       });
 
   Future<ApiResponse<Map<String, dynamic>>> createPatient({

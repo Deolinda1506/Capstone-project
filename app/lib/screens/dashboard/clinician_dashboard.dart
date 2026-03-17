@@ -6,6 +6,7 @@ import '../../core/services/sync_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/nav_buttons.dart';
+import '../../core/widgets/quick_action_card.dart';
 import '../../core/widgets/responsive_layout.dart';
 
 /// Level 2: Hospital Clinician - Advanced UI
@@ -53,49 +54,49 @@ class ClinicianDashboard extends StatelessWidget {
                     ),
               ),
               Text(
-                'Kigali • Gasabo District Hospital',
+                context.l10n.t('clinicianLocation'),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Colors.grey[600],
                     ),
               ),
-              const SizedBox(height: 32),
-              _ActionCard(
-                icon: Icons.dashboard,
+              const SizedBox(height: 28),
+              QuickActionCard(
+                icon: Icons.medical_services,
                 title: context.l10n.t('hospitalDashboard'),
                 subtitle: context.l10n.t('incomingReferrals'),
                 color: AppTheme.riskHigh,
                 onTap: () => context.go('/hospital-dashboard'),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               _SectionTitle(title: context.l10n.t('reviewValidation')),
-              const SizedBox(height: 12),
-              _ActionCard(
-                icon: Icons.analytics,
+              const SizedBox(height: 14),
+              QuickActionCard(
+                icon: Icons.insights,
                 title: context.l10n.t('analyses'),
                 subtitle: context.l10n.t('pastScanResults'),
                 color: AppTheme.accentTeal,
                 onTap: () => context.go('/analyses'),
               ),
-              const SizedBox(height: 12),
-              _ActionCard(
-                icon: Icons.check_circle_outline,
+              const SizedBox(height: 14),
+              QuickActionCard(
+                icon: Icons.verified_user,
                 title: context.l10n.t('clinicalValidation'),
                 subtitle: context.l10n.t('confirmOverrideAi'),
                 color: AppTheme.primaryBlue,
                 onTap: () => context.push('/clinician/validate'),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               _SectionTitle(title: context.l10n.t('treatment')),
-              const SizedBox(height: 12),
-              _ActionCard(
-                icon: Icons.assignment,
+              const SizedBox(height: 14),
+              QuickActionCard(
+                icon: Icons.medical_information,
                 title: context.l10n.t('treatmentPlans'),
                 subtitle: context.l10n.t('createManagePlans'),
-                color: Colors.blue,
+                color: AppTheme.softBlue,
                 onTap: () => context.push('/clinician/plans'),
               ),
-              const SizedBox(height: 12),
-              _ActionCard(
+              const SizedBox(height: 14),
+              QuickActionCard(
                 icon: Icons.local_hospital,
                 title: context.l10n.t('referrals'),
                 subtitle: context.l10n.t('incomingFromChws'),
@@ -128,34 +129,3 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _ActionCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.2),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
-      ),
-    );
-  }
-}

@@ -59,6 +59,17 @@ class ResultScreen extends StatelessWidget {
     }
   }
 
+  String _riskExplanation(BuildContext context) {
+    switch (risk.toLowerCase()) {
+      case 'high':
+        return context.l10n.t('riskHighExplained');
+      case 'moderate':
+        return context.l10n.t('riskModerateExplained');
+      default:
+        return context.l10n.t('riskLowExplained');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateStr = analyzedAt != null
@@ -168,12 +179,24 @@ class ResultScreen extends StatelessWidget {
                               fontWeight: FontWeight.w500,
                             ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(
-                        context.l10n.t('intimaMediaThickness'),
+                        context.l10n.t('imtExplained'),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Colors.grey[600],
+                              height: 1.4,
                             ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _riskExplanation(context),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: _riskColor,
+                              fontWeight: FontWeight.w500,
+                              height: 1.3,
+                            ),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),

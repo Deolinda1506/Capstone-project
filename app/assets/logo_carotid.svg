@@ -2,7 +2,7 @@
   <defs>
     <linearGradient id="vessel" x1="50%" y1="100%" x2="50%" y2="0%">
       <stop offset="0%" stop-color="#0D47A1"/>
-      <stop offset="100%" stop-color="#1565C0"/>
+      <stop offset="100%" stop-color="#0D47A1"/>
     </linearGradient>
   </defs>
   <!-- Carotid artery silhouette: common carotid stem + bifurcation -->
