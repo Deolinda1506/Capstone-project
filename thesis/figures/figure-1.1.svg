@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 220" font-family="sans-serif" font-size="12">
+  <rect width="600" height="220" fill="#fafafa" stroke="#ccc"/>
+  <text x="300" y="25" text-anchor="middle" font-weight="bold">Project Gantt Chart and Research Timeline</text>
+  <text x="20" y="55">Phase</text>
+  <line x1="100" y1="50" x2="580" y2="50" stroke="#333"/>
+  <text x="20" y="85">Sprint 1: Data &amp; Preprocessing</text>
+  <rect x="120" y="70" width="100" height="25" fill="#4A90D9"/>
+  <text x="20" y="115">Sprint 2: AI Model Development</text>
+  <rect x="230" y="100" width="100" height="25" fill="#4A90D9"/>
+  <text x="20" y="145">Sprint 3: System Integration</text>
+  <rect x="340" y="130" width="100" height="25" fill="#4A90D9"/>
+  <text x="20" y="175">Sprint 4: Deployment &amp; Testing</text>
+  <rect x="450" y="160" width="100" height="25" fill="#4A90D9"/>
+  <text x="130" y="205" fill="#666" font-size="10">Jan 2026</text>
+  <text x="240" y="205" fill="#666" font-size="10">Feb 2026</text>
+  <text x="350" y="205" fill="#666" font-size="10">Mar 2026</text>
+</svg>
