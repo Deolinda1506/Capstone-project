@@ -1,8 +1,16 @@
 # Miscellaneous
 .venv/
+.venv311/
 venv/
-data/
+node_modules/
+**/firebase-key.json
+/data/
+ML/data/
 ML/models/
+ML/segmentation_results.zip
+ML/unet_logs/
+ML/vit_logs/
+ML/AttentionViT.keras
 *.class
 *.log
 *.pyc
