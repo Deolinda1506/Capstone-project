@@ -7,7 +7,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Privacy consent: digital signature or thumbprint
 class PatientConsentScreen extends StatefulWidget {
   static const String route = '/patient/consent';
 

@@ -18,7 +18,6 @@ import '../../screens/settings/settings_screen.dart';
 import '../../screens/dashboard/chw_dashboard.dart';
 import '../../screens/dashboard/clinician_dashboard.dart';
 import '../../screens/dashboard/admin_dashboard.dart';
-import '../../screens/dashboard/hospital_dashboard_screen.dart';
 import '../models/user_model.dart';
 import '../models/patient_model.dart';
 import '../models/user_role.dart';
@@ -110,14 +109,6 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/hospital-dashboard',
-                builder: (context, state) => const HospitalDashboardScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
                 path: '/settings',
                 builder: (context, state) => const SettingsScreen(),
               ),
@@ -162,19 +153,13 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
         },
       ),
       GoRoute(
-        path: '/result',
+        path: '/result/:scanId',
         builder: (context, state) {
+          final scanId = state.pathParameters['scanId'] ?? '';
           final extra = state.extra as Map<String, dynamic>? ?? {};
           return ResultScreen(
-            risk: extra['risk'] as String? ?? 'low',
-            imt: (extra['imt'] as num?)?.toDouble() ?? 0.0,
-            plaqueDetected: extra['plaqueDetected'] as bool?,
-            patientName: extra['patientName'] as String?,
-            analyzedAt: extra['analyzedAt'] as String?,
-            fromAnalyses: extra['fromAnalyses'] as bool? ?? false,
-            segmentationOverlayBase64: extra['segmentationOverlayBase64'] as String?,
-            originalImageBase64: extra['originalImageBase64'] as String?,
-            hasAiOverlay: extra['hasAiOverlay'] as bool? ?? false,
+            scanId: scanId,
+            initialData: extra.isNotEmpty ? extra : null,
           );
         },
       ),

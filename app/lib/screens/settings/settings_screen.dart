@@ -12,7 +12,6 @@ import '../../core/widgets/nav_buttons.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/l10n/locale_provider.dart';
 
-/// Settings screen - language, referral list, logout, about, privacy, terms
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -60,14 +59,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _showThemePicker(context),
               ),
-              if (auth.currentUser?.role == UserRole.clinician || auth.currentUser?.role == UserRole.admin)
-                ListTile(
-                  leading: const Icon(Icons.local_hospital),
-                  title: Text(l10n.t('hospitalDashboard')),
-                  subtitle: Text(l10n.t('incomingReferrals')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.go('/hospital-dashboard'),
-                ),
               ListTile(
                 leading: const Icon(Icons.language),
                 title: Text(l10n.t('language')),

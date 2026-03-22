@@ -2,6 +2,9 @@
 SMS alerts to clinicians (Africa's Talking) when a high-risk scan result is recorded.
 Configure via env: AFRICAS_TALKING_USERNAME, AFRICAS_TALKING_API_KEY, AFRICAS_TALKING_CLINICIAN_PHONES (comma-separated).
 If not configured, alerts are skipped (no error).
+
+Sandbox (free): Use AFRICAS_TALKING_USERNAME=sandbox and your sandbox API key.
+Messages are simulated and not delivered to real phones. See .env.example.
 """
 from __future__ import annotations
 

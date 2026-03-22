@@ -1,4 +1,4 @@
-"""Email/password and Firebase authentication."""
+"""Email/password authentication."""
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -9,12 +9,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
+from backend.auth import get_current_user
 from backend.database import get_db
 from backend.models import Hospital, User
 from backend.schemas.user import (
     LoginRequest,
     RegisterRequest,
-    FirebaseLoginRequest,
+    RegisterHospitalRequest,
+    InviteUserRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest,
     UserResponse,
@@ -81,18 +83,22 @@ def login(
     body: LoginRequest,
     db: Annotated[Session, Depends(get_db)],
 ):
-    """Login with district ID (e.g. 0102-001) and password. Returns JWT access_token and user."""
-    identifier = (body.identifier or "").strip()
-    user = db.query(User).filter(User.staff_id == identifier, User.is_deleted == False).first()
+    """Login with staff ID (e.g. 0102-001) or email (for admins). Returns JWT access_token and user."""
+    identifier = (body.identifier or "").strip().lower()
+    # Admin/hospital users log in with email; CHWs/clinicians with staff_id
+    if "@" in identifier:
+        user = db.query(User).filter(User.email == identifier, User.is_deleted == False).first()
+    else:
+        user = db.query(User).filter(User.staff_id == identifier, User.is_deleted == False).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid District ID or password",
+            detail="Invalid email/ID or password",
         )
     if not user.password_hash:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This account uses Firebase. Sign in with Google or your Firebase provider instead.",
+            detail="Account not configured for password login. Contact your supervisor.",
         )
     if (user.status or "approved") != "approved":
         raise HTTPException(
@@ -102,7 +108,7 @@ def login(
     if not pwd_context.verify(_truncate_for_bcrypt(body.password), user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid District ID or password",
+            detail="Invalid email/ID or password",
         )
     token = create_access_token(subject=user.id)
     return TokenResponse(access_token=token, user=_user_response(user, db))
@@ -176,59 +182,135 @@ def register(
     return TokenResponse(access_token=token, user=_user_response(user, db))
 
 
-@router.post("/firebase", response_model=TokenResponse)
-def firebase_login(
-    body: FirebaseLoginRequest,
+@router.post("/register-hospital", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def register_hospital(
+    body: RegisterHospitalRequest,
     db: Annotated[Session, Depends(get_db)],
 ):
-    """Firebase ID token login. Verifies token, creates user if first sign-in, returns JWT."""
-    try:
-        from backend.firebase_config import _decode_firebase_token
-    except ImportError:
+    """Register a medical organization (hospital/clinic). Creates the org and the first admin user."""
+    email = (body.admin_email or "").strip().lower()
+    if not email or "@" not in email:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Firebase auth not configured. Install firebase-admin and add firebase-key.json.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Valid admin email is required",
         )
-    try:
-        decoded = _decode_firebase_token(body.id_token)
-    except ValueError as e:
+    existing_user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
+    if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists",
         )
-    firebase_uid = decoded.get("uid")
-    if not firebase_uid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Firebase token",
-        )
-    email = decoded.get("email") or ""
-    name = decoded.get("name") or decoded.get("email", "").split("@")[0] or "User"
-    user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
-    if not user:
-        if db.query(User).filter(User.email == email).first():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered with password. Use email/password login.",
-            )
-        user = User(
-            id=str(uuid4()),
-            firebase_uid=firebase_uid,
-            email=email or f"{firebase_uid}@firebase.local",
-            display_name=name,
-            role="chw",
-            status="approved",
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    elif user.is_deleted or (user.status or "approved") != "approved":
+    hospital_id = str(uuid4())
+    hospital = Hospital(
+        id=hospital_id,
+        name=(body.hospital_name or "").strip() or "Unnamed Facility",
+        province=body.province,
+        district=body.district,
+        sector=body.sector,
+    )
+    db.add(hospital)
+
+    admin_id = str(uuid4())
+    admin = User(
+        id=admin_id,
+        email=email,
+        password_hash=pwd_context.hash(_truncate_for_bcrypt(body.password)),
+        display_name=body.display_name or email.split("@")[0],
+        role="admin",
+        staff_id=f"admin-{hospital_id[:8]}",
+        hospital_id=hospital_id,
+        facility=body.hospital_name,
+        status="approved",
+    )
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+
+    token = create_access_token(subject=admin.id)
+    return TokenResponse(access_token=token, user=_user_response(admin, db))
+
+
+@router.post("/invite-user", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def invite_user(
+    body: InviteUserRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Admin adds a clinician or CHW to their organization. Admin must be logged in."""
+    if (current_user.role or "").lower() != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account not approved or has been deactivated.",
+            detail="Only admins can add clinicians or CHWs",
         )
-    token = create_access_token(subject=user.id)
-    return TokenResponse(access_token=token, user=_user_response(user, db))
+    if not current_user.hospital_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin must belong to an organization",
+        )
+    email = (body.email or "").strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Valid email is required",
+        )
+    existing = db.query(User).filter(User.email == email, User.is_deleted == False).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email already exists",
+        )
+    hospital = db.get(Hospital, current_user.hospital_id)
+    if not hospital:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization not found",
+        )
+    role = (body.role or "chw").lower()
+    if role not in ("chw", "clinician"):
+        role = "chw"
+    count = db.query(User).filter(User.hospital_id == current_user.hospital_id).count()
+    staff_id = (body.staff_id or "").strip() or f"{current_user.hospital_id[:8].upper()}-{count + 1:03d}"
+    new_user = User(
+        id=str(uuid4()),
+        email=email,
+        password_hash=pwd_context.hash(_truncate_for_bcrypt(body.password)),
+        display_name=body.display_name or email.split("@")[0],
+        role=role,
+        staff_id=staff_id,
+        hospital_id=current_user.hospital_id,
+        facility=hospital.name,
+        status="approved",
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return _user_response(new_user, db)
+
+
+@router.get("/team")
+def list_team(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Admin lists clinicians and CHWs in their organization."""
+    if (current_user.role or "").lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can view team members",
+        )
+    if not current_user.hospital_id:
+        return []
+    users = (
+        db.query(User)
+        .filter(
+            User.hospital_id == current_user.hospital_id,
+            User.is_deleted == False,
+            User.id != current_user.id,
+        )
+        .order_by(User.role, User.display_name)
+        .all()
+    )
+    return [_user_response(u, db) for u in users]
 
 
 @router.post("/forgot-password")

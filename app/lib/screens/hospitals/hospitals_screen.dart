@@ -10,7 +10,6 @@ import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/responsive_layout.dart';
 import '../referral/referral_map_widget.dart';
 
-/// Hospitals list - tap a hospital to add to referral list
 class HospitalsScreen extends StatelessWidget {
   const HospitalsScreen({super.key});
 

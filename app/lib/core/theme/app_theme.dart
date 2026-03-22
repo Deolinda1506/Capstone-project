@@ -6,18 +6,16 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTheme {
   AppTheme._();
 
-  // Spacing constants for consistency
   static const double spacingXs = 4;
   static const double spacingSm = 8;
   static const double spacingMd = 16;
   static const double spacingLg = 24;
   static const double spacingXl = 32;
 
-  // Primary: deep medical blue
-  static const Color primaryBlue = Color(0xFF0D47A1);
-  // Secondary: health teal
+  // #1F41BB from Figma
+  static const Color primaryBlue = Color(0xFF1F41BB);
+  static const Color primaryBlueLight = Color(0xFF4A6FD4);
   static const Color accentTeal = Color(0xFF00695C);
-  // Tertiary: soft blue for accents
   static const Color softBlue = Color(0xFF1976D2);
   static const Color riskHigh = Color(0xFFD32F2F);
   static const Color riskModerate = Color(0xFFF57C00);

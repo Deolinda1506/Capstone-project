@@ -1,11 +1,15 @@
-"""Scans: upload and list with results (protected). Images processed in-memory only (not stored permanently)."""
+"""Scan upload, inference, and listing. Images stored for clinician dashboard."""
 import base64
 import hashlib
 import logging
+import os
+import time
+from pathlib import Path
 from uuid import uuid4
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -16,8 +20,27 @@ from backend.schemas.scan import ScanUploadResponse
 from backend.auth import get_current_user_or_dev
 from backend import sms_alerts
 from backend import email_service
+from backend import latency as latency_tracker
 
 router = APIRouter(prefix="/scans", tags=["scans"])
+
+# Directory for storing scan images (overlay for doctor view). Create if missing.
+UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+
+
+def _save_scan_image(scan_id: str, overlay_b64: str | None, original_bytes: bytes) -> str | None:
+    try:
+        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+        path = UPLOADS_DIR / f"{scan_id}.png"
+        if overlay_b64:
+            data = base64.b64decode(overlay_b64)
+        else:
+            data = original_bytes
+        path.write_bytes(data)
+        return f"uploads/{scan_id}.png"
+    except Exception as e:
+        logger.warning("Could not save scan image: %s", e)
+        return None
 
 
 @router.post(
@@ -29,15 +52,10 @@ router = APIRouter(prefix="/scans", tags=["scans"])
 async def upload_scan_image(
     patient_id: Annotated[str, Form(description="Patient UUID or display identifier (e.g. CC-0001). Create patient via POST /patients first if needed.")],
     file: Annotated[UploadFile, File(description="Carotid ultrasound image")],
+    patient_age: Annotated[int | None, Form(description="Optional patient age (years). When provided, age-specific IMT thresholds are used.")] = None,
     db: Annotated[Session, Depends(get_db)] = ...,
     current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
-    """
-    Upload an image for a patient: creates a scan, runs prediction, creates the result.
-    If high-risk, referral SMS and email are sent. Image is processed in-memory only (not stored).
-    Token optional: if provided, uses that user; otherwise uses default dev user.
-    patient_id can be the patient's UUID (id) or their display identifier (e.g. CC-0001).
-    """
     ct = (file.content_type or "").lower()
     fn = (file.filename or "").lower()
     is_image = ct.startswith("image/") or any(fn.endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".gif", ".webp"))
@@ -60,28 +78,43 @@ async def upload_scan_image(
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
     contents = await file.read()
+    t_start = time.perf_counter()
     try:
         from backend.inference import predict_imt
-        pred = predict_imt(contents, return_segmentation_overlay=True)
+        pred = predict_imt(contents, return_segmentation_overlay=True, patient_age=patient_age)
+        latency_tracker.record_inference_latency(pred.get("inference_time_sec", time.perf_counter() - t_start))
     except ImportError as e:
         logger.warning("ML model not available (%s). Using demo fallback.", e)
         h = int(hashlib.sha256(contents[:1024]).hexdigest()[:8], 16)
-        imt_mm = round(2.0 + (h % 25) / 10, 2)
-        risk_level = "High" if imt_mm >= 3.5 else "Moderate" if imt_mm >= 3.0 else "Low"
+        imt_mm = round(0.5 + (h % 15) / 10, 2)  # Demo: 0.5–1.9 mm (spans Low/Moderate/High)
+        stenosis_pct = (1 - imt_mm / 1.5) * 80 if imt_mm < 1.5 else min(99, 70 + (imt_mm - 1.2) * 20)
+        from backend.inference import _get_imt_thresholds
+        mod_mm, high_mm = _get_imt_thresholds(patient_age)
+        risk_level = "High" if imt_mm > high_mm else "Moderate" if imt_mm >= mod_mm else "Low"
         pred = {
             "imt_mm": imt_mm,
             "risk_level": risk_level,
-            "is_high_risk": imt_mm >= 3.5,
+            "is_high_risk": imt_mm > high_mm,
+            "stenosis_pct": round(stenosis_pct, 1),
+            "stenosis_source": "imt_correlation",  # Demo has no segmentation
+            "inference_time_sec": round(time.perf_counter() - t_start, 3),
             "segmentation_overlay_base64": base64.b64encode(contents).decode("ascii"),
             "has_ai_overlay": False,
         }
+        latency_tracker.record_inference_latency(pred["inference_time_sec"])
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Prediction failed: {str(e)}")
+    scan_id = str(uuid4())
+    image_path = _save_scan_image(
+        scan_id,
+        pred.get("segmentation_overlay_base64"),
+        contents,
+    )
     scan = Scan(
-        id=str(uuid4()),
+        id=scan_id,
         patient_id=patient.id,
         user_id=current_user.id,
-        image_path=None,
+        image_path=image_path,
     )
     db.add(scan)
     db.commit()
@@ -92,7 +125,9 @@ async def upload_scan_image(
         imt_mm=pred["imt_mm"],
         risk_level=pred["risk_level"],
         is_high_risk=pred["is_high_risk"],
-        model_version="carotid_swin_unetr_2d",
+        stenosis_pct=pred.get("stenosis_pct"),
+        stenosis_source=pred.get("stenosis_source"),
+        model_version="attention_unet",
     )
     db.add(result)
     db.commit()
@@ -109,14 +144,18 @@ async def upload_scan_image(
             imt_mm=pred["imt_mm"],
             risk_level=pred["risk_level"],
         )
-    # Plaque heuristic: IMT >= 2.0 mm often indicates wall thickening/plaque
-    plaque_detected = pred["imt_mm"] >= 2.0
+    # Plaque heuristic: IMT >= 0.9 mm indicates wall thickening/plaque (moderate+ risk)
+    plaque_detected = pred["imt_mm"] >= 0.9
     return ScanUploadResponse(
         scan=scan,
         result=result,
         segmentation_overlay_base64=pred.get("segmentation_overlay_base64"),
         has_ai_overlay=pred.get("has_ai_overlay", False),
         plaque_detected=plaque_detected,
+        stenosis_pct=pred.get("stenosis_pct"),
+        stenosis_source=pred.get("stenosis_source"),
+        inference_time_sec=pred.get("inference_time_sec"),
+        patient_age=patient_age,
     )
 
 
@@ -126,18 +165,17 @@ def list_scans_with_results(
     db: Annotated[Session, Depends(get_db)] = ...,
     current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
-    """List recent scans with result and patient info for analyses view."""
-    rows = (
+    """List recent scans with result and patient info for analyses view. Clinicians and admins see all; CHWs see only their patients' scans."""
+    q = (
         db.query(Scan, Result, Patient)
         .join(Result, Scan.id == Result.scan_id)
         .join(Patient, Scan.patient_id == Patient.id)
-        .filter(
-            (Patient.user_id == current_user.id) & (Scan.is_deleted == False)
-        )
-        .order_by(Result.created_at.desc())
-        .limit(limit)
-        .all()
+        .filter(Scan.is_deleted == False)
     )
+    role = (current_user.role or "chw").lower()
+    if role == "chw":
+        q = q.filter(Patient.user_id == current_user.id)
+    rows = q.order_by(Result.created_at.desc()).limit(limit).all()
     return [
         {
             "scan_id": s.id,
@@ -147,7 +185,10 @@ def list_scans_with_results(
             "imt_mm": r.imt_mm,
             "risk_level": r.risk_level,
             "is_high_risk": r.is_high_risk,
-            "plaque_detected": r.imt_mm >= 2.0,
+            "stenosis_pct": r.stenosis_pct,
+            "stenosis_source": r.stenosis_source,
+            "plaque_detected": r.imt_mm >= 0.9,
+            "has_image": bool(s.image_path),
         }
         for s, r, p in rows
     ]
@@ -183,7 +224,73 @@ def list_high_risk_referrals(
             "imt_mm": r.imt_mm,
             "risk_level": r.risk_level,
             "is_high_risk": r.is_high_risk,
-            "plaque_detected": r.imt_mm >= 2.0,
+            "stenosis_pct": r.stenosis_pct,
+            "stenosis_source": r.stenosis_source,
+            "plaque_detected": r.imt_mm >= 0.9,
+            "has_image": bool(s.image_path),
         }
         for s, r, p in rows
     ]
+
+
+@router.get("/{scan_id}/result")
+def get_scan_result(
+    scan_id: str,
+    db: Annotated[Session, Depends(get_db)] = ...,
+    current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
+):
+    """
+    Get result and metadata for a single scan. Enables result screen to survive reload.
+    Clinicians and admins can view any scan; CHWs can view only their patients' scans.
+    """
+    scan = db.get(Scan, scan_id)
+    if not scan or scan.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    r = db.query(Result).filter(Result.scan_id == scan_id).first()
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Result not found")
+    patient = db.get(Patient, scan.patient_id)
+    if not patient:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+    role = (current_user.role or "chw").lower()
+    if role == "chw" and patient.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    return {
+        "scan_id": scan.id,
+        "patient_id": patient.id,
+        "patient_identifier": patient.identifier,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "imt_mm": r.imt_mm,
+        "risk_level": r.risk_level,
+        "is_high_risk": r.is_high_risk,
+        "stenosis_pct": r.stenosis_pct,
+        "stenosis_source": r.stenosis_source,
+        "plaque_detected": r.imt_mm >= 0.9,
+        "has_image": bool(scan.image_path),
+    }
+
+
+@router.get("/{scan_id}/image")
+def get_scan_image(
+    scan_id: str,
+    db: Annotated[Session, Depends(get_db)] = ...,
+    current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
+):
+    """
+    Return the stored scan image (overlay) for clinician/CHW review.
+    Clinicians and admins can view any scan; CHWs can view only their patients' scans.
+    """
+    scan = db.get(Scan, scan_id)
+    if not scan or scan.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    if not scan.image_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No image stored for this scan")
+    role = (current_user.role or "chw").lower()
+    if role == "chw":
+        patient = db.get(Patient, scan.patient_id)
+        if not patient or patient.user_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    path = Path(__file__).resolve().parent.parent.parent / scan.image_path
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found")
+    return FileResponse(path, media_type="image/png")

@@ -6,7 +6,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Reset password - enter token from email + new password
 class ResetPasswordScreen extends StatefulWidget {
   final AuthService authService;
   final String? tokenFromUrl;

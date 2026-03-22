@@ -11,5 +11,4 @@ strokelink.db
 __pycache__/
 *.py[cod]
 *.pyo
-*firebase-key.json
 ML/models/*.pt

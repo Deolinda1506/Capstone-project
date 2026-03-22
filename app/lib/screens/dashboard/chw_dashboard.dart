@@ -9,9 +9,6 @@ import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/quick_action_card.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Level 1: CHW - Simplified UI
-/// Focus: Scan → Result (Color) → Refer
-/// Only sees patients in their village
 class ChwDashboard extends StatelessWidget {
   final UserModel user;
   final SyncService syncService;

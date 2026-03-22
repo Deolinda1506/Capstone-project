@@ -10,8 +10,7 @@ class ApiClient {
   final String _baseUrl;
   String? _token;
 
-  /// Called when a request with a token returns 401 (expired/invalid). Clear auth and redirect to login.
-  void Function()? onUnauthorized;
+  void Function()? onUnauthorized; // 401 -> clear auth, go to login
 
   void setToken(String? token) => _token = token;
 
@@ -91,10 +90,6 @@ class ApiClient {
   Future<ApiResponse<Map<String, dynamic>>> login(String identifier, String password) =>
       _request('POST', '/auth/login', body: {'identifier': identifier, 'password': password});
 
-  /// Firebase ID token login. Pass the token from Firebase Auth (e.g. user.getIdToken()).
-  Future<ApiResponse<Map<String, dynamic>>> loginWithFirebase(String idToken) =>
-      _request('POST', '/auth/firebase', body: {'id_token': idToken});
-
   Future<ApiResponse<Map<String, dynamic>>> forgotPassword(String email) =>
       _request('POST', '/auth/forgot-password', body: {'email': email});
 
@@ -140,8 +135,15 @@ class ApiClient {
   Future<ApiResponse<List<dynamic>>> listPatients() =>
       _request('GET', '/patients');
 
-  Future<ApiResponse<Map<String, dynamic>>> uploadScan(String patientId, Uint8List imageBytes) =>
-      _request('POST', '/scans/upload', body: {'patient_id': patientId}, fileBytes: imageBytes, fileField: 'file');
+  Future<ApiResponse<Map<String, dynamic>>> uploadScan(
+    String patientId,
+    Uint8List imageBytes, {
+    int? patientAge,
+  }) {
+    final body = <String, dynamic>{'patient_id': patientId};
+    if (patientAge != null) body['patient_age'] = patientAge;
+    return _request('POST', '/scans/upload', body: body, fileBytes: imageBytes, fileField: 'file');
+  }
 
   Future<ApiResponse<List<dynamic>>> listScans({String? patientId}) {
     final q = patientId != null ? '?patient_id=$patientId' : '';
@@ -154,6 +156,28 @@ class ApiClient {
   /// High-risk referrals for hospital dashboard (clinicians see all, CHWs see own)
   Future<ApiResponse<List<dynamic>>> listHighRiskReferrals({int limit = 50}) =>
       _request('GET', '/scans/high-risk?limit=$limit');
+
+  /// Fetch result and metadata for a single scan. Enables result screen to survive reload.
+  Future<ApiResponse<Map<String, dynamic>>> getScanResult(String scanId) =>
+      _request('GET', '/scans/$scanId/result');
+
+  /// Fetch stored scan image (overlay) for clinician review. Returns base64 PNG string.
+  Future<ApiResponse<String>> getScanImage(String scanId) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/scans/$scanId/image');
+      final h = <String, String>{'Accept': 'image/png'};
+      if (_token != null) h['Authorization'] = 'Bearer $_token';
+      final response = await http.get(uri, headers: h);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final b64 = base64Encode(response.bodyBytes);
+        return ApiResponse<String>(success: true, data: b64);
+      }
+      if (response.statusCode == 401 && _token != null) onUnauthorized?.call();
+      return ApiResponse<String>(success: false, error: response.body);
+    } catch (e) {
+      return ApiResponse<String>(success: false, error: e.toString());
+    }
+  }
 
   Future<ApiResponse<Map<String, dynamic>>> health() =>
       _request('GET', '/health');

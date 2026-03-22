@@ -9,8 +9,6 @@ import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/quick_action_card.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Level 3: Admin/Researcher (ALU/RBC)
-/// Focus: Anonymized stats → System Health → AI Accuracy Monitoring
 class AdminDashboard extends StatelessWidget {
   final UserModel user;
   final SyncService syncService;
@@ -34,9 +32,7 @@ class AdminDashboard extends StatelessWidget {
             Text(context.l10n.t('adminDashboard')),
           ],
         ),
-        actions: [
-          navNextButton(context),
-        ],
+        actions: [navNextButton(context)],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -46,25 +42,17 @@ class AdminDashboard extends StatelessWidget {
             children: [
               Text(
                 '${user.fullName ?? "Admin"}',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               Text(
                 'ALU / RBC • System oversight',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
               ),
               const SizedBox(height: 28),
-              QuickActionCard(
-                icon: Icons.medical_services,
-                title: context.l10n.t('hospitalDashboard'),
-                subtitle: context.l10n.t('incomingReferrals'),
-                color: AppTheme.riskHigh,
-                onTap: () => context.go('/hospital-dashboard'),
-              ),
-              const SizedBox(height: 20),
               _SectionTitle(title: context.l10n.t('anonymizedStatistics')),
               const SizedBox(height: 14),
               _StatCard(
@@ -106,7 +94,7 @@ class AdminDashboard extends StatelessWidget {
               QuickActionCard(
                 icon: Icons.monitor_heart,
                 title: context.l10n.t('modelPerformance'),
-                subtitle: context.l10n.t('swinUnetrMetrics'),
+                subtitle: context.l10n.t('attentionUnetMetrics'),
                 color: AppTheme.primaryBlue,
                 onTap: () => context.push('/admin/ai-metrics'),
               ),
@@ -136,9 +124,9 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
-          ),
+        fontWeight: FontWeight.w600,
+        color: Colors.grey[700],
+      ),
     );
   }
 }
@@ -191,20 +179,20 @@ class _StatCard extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: Theme.of(context).textTheme.bodyMedium),
-                  Text(
-                    value,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
+                ),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              ],
             ),
+          ),
         ],
       ),
     );

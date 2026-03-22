@@ -1,10 +1,9 @@
-/// Patient model - unique ID (CC-XXXX) + consent
-/// nationalId is optional (e.g. if NID scanned for reference)
 class PatientModel {
   final String? id;
   final String? name;
   final int? age;
   final String? gender;
+  final String? email;
   final String? nationalId;
   final String? villageId;
   final bool consentGiven;
@@ -15,6 +14,7 @@ class PatientModel {
     this.name,
     this.age,
     this.gender,
+    this.email,
     this.nationalId,
     this.villageId,
     this.consentGiven = false,
@@ -27,6 +27,7 @@ class PatientModel {
       name: json['name'] as String?,
       age: json['age'] as int?,
       gender: json['gender'] as String?,
+      email: json['email'] as String?,
       nationalId: json['national_id'] as String?,
       villageId: json['village_id'] as String?,
       consentGiven: json['consent_given'] as bool? ?? false,
@@ -41,6 +42,7 @@ class PatientModel {
         'name': name,
         'age': age,
         'gender': gender,
+        'email': email,
         'national_id': nationalId,
         'village_id': villageId,
         'consent_given': consentGiven,
@@ -52,6 +54,7 @@ class PatientModel {
     String? name,
     int? age,
     String? gender,
+    String? email,
     String? nationalId,
     String? villageId,
     bool? consentGiven,
@@ -62,6 +65,7 @@ class PatientModel {
         name: name ?? this.name,
         age: age ?? this.age,
         gender: gender ?? this.gender,
+        email: email ?? this.email,
         nationalId: nationalId ?? this.nationalId,
         villageId: villageId ?? this.villageId,
         consentGiven: consentGiven ?? this.consentGiven,

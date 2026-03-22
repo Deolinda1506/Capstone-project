@@ -1,5 +1,3 @@
-/// Role-Based Access Control (RBAC) for CarotidCheck
-/// Level 1: CHW, Level 2: Clinician, Level 3: Admin
 
 enum UserRole {
   /// Level 1: Community Health Worker

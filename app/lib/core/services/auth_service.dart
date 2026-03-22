@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import '../config/api_config.dart';
 import '../constants/app_constants.dart';
@@ -7,7 +10,6 @@ import '../models/location_model.dart';
 import 'api_client.dart';
 import 'secure_storage_service.dart';
 
-/// Auth via backend API (email + password)
 class AuthService extends ChangeNotifier {
   final SecureStorageService _storage = SecureStorageService();
   final ApiClient _api = ApiClient(baseUrl: ApiConfig.baseUrl);
@@ -31,7 +33,7 @@ class AuthService extends ChangeNotifier {
       final userJson = await _storage.readJson(AppConstants.keyUserData);
       if (token != null && userJson != null) {
         _authToken = token;
-        _currentUser = UserModel.fromJson(userJson);
+        _currentUser = _userFromBackend(userJson);
         _api.setToken(token);
         _api.onUnauthorized = _handleUnauthorized;
       }
@@ -42,6 +44,38 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  static String _hashPassword(String userId, String password) {
+    final bytes = utf8.encode('$userId:$password');
+    final digest = sha256.convert(bytes);
+    return digest.toString();
+  }
+
+  Future<void> _saveCredentialsForOffline(String userId, String password) async {
+    final hash = _hashPassword(userId, password);
+    await _storage.saveCachedPasswordHash(hash);
+  }
+
+  Future<bool> _tryOfflineLogin(String identifier, String password) async {
+    final hash = await _storage.getCachedPasswordHash();
+    final userJson = await _storage.readJson(AppConstants.keyUserData);
+    final token = await _storage.getOfflineToken();
+    if (hash == null || userJson == null || token == null) return false;
+
+    final cachedStaffId = userJson['staff_id'] as String?;
+    final cachedUserId = userJson['id'] as String?;
+    if (cachedStaffId == null || cachedUserId == null) return false;
+    if (cachedStaffId != identifier.trim()) return false;
+
+    final computedHash = _hashPassword(cachedUserId, password);
+    if (computedHash != hash) return false;
+
+    _currentUser = _userFromBackend(userJson);
+    _authToken = token;
+    _api.setToken(token);
+    _api.onUnauthorized = _handleUnauthorized;
+    return true;
   }
 
   void _handleUnauthorized() {
@@ -97,7 +131,8 @@ class AuthService extends ChangeNotifier {
           _api.onUnauthorized = _handleUnauthorized;
           await _storage.saveOfflineToken(_authToken!);
           await _storage.saveAuthToken(_authToken!);
-          await _storage.writeJson(AppConstants.keyUserData, _currentUser!.toJson());
+          await _storage.writeJson(AppConstants.keyUserData, userData);
+          await _saveCredentialsForOffline(userData['id'] as String, password);
         }
         final assignedId = userData?['staff_id'] as String?;
         _isLoading = false;
@@ -133,7 +168,8 @@ class AuthService extends ChangeNotifier {
           _api.onUnauthorized = _handleUnauthorized;
           await _storage.saveOfflineToken(_authToken!);
           await _storage.saveAuthToken(_authToken!);
-          await _storage.writeJson(AppConstants.keyUserData, _currentUser!.toJson());
+          await _storage.writeJson(AppConstants.keyUserData, userData);
+          await _saveCredentialsForOffline(userData['id'] as String, password);
         }
         _isLoading = false;
         notifyListeners();
@@ -144,7 +180,14 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      _error = e.toString();
+      final offlineOk = await _tryOfflineLogin(identifier, password);
+      if (offlineOk) {
+        _error = null;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+      _error = 'Invalid District ID or password. When offline, use the same password from your last successful login.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -178,6 +221,7 @@ class AuthService extends ChangeNotifier {
     await _storage.delete(AppConstants.keyAuthToken);
     await _storage.delete(AppConstants.keyOfflineToken);
     await _storage.delete(AppConstants.keyUserData);
+    await _storage.delete(AppConstants.keyCachedPasswordHash);
     notifyListeners();
   }
 

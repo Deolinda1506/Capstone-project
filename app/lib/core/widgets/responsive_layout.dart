@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Breakpoints for responsive layout
 class Breakpoints {
   static const double mobile = 600;
   static const double tablet = 900;
@@ -14,7 +13,6 @@ class Breakpoints {
       MediaQuery.sizeOf(context).width;
 }
 
-/// Constrains content width on large screens, centers on tablets/desktops
 class ResponsiveContainer extends StatelessWidget {
   final Widget child;
   final double maxWidth;
@@ -55,14 +53,12 @@ class ResponsiveContainer extends StatelessWidget {
   }
 }
 
-/// Responsive padding based on screen size
 EdgeInsets responsivePadding(BuildContext context) {
   final width = MediaQuery.sizeOf(context).width;
   final horizontal = width < Breakpoints.mobile ? 16.0 : (width < Breakpoints.tablet ? 24.0 : 32.0);
   return EdgeInsets.symmetric(horizontal: horizontal, vertical: 16);
 }
 
-/// Responsive horizontal padding value
 double responsiveHorizontalPadding(BuildContext context) {
   final width = MediaQuery.sizeOf(context).width;
   if (width < Breakpoints.mobile) return 16;

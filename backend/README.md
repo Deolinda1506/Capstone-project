@@ -16,20 +16,38 @@ source .venv/bin/activate
 # On Windows:
 # .venv\Scripts\activate
 
-# Install dependencies (can take a few minutes: torch, monai, etc.)
+# Install dependencies (can take a few minutes: tensorflow, etc.)
 pip install -r backend/requirements.txt
+```
+
+**If TensorFlow fails to install** (`No matching distribution found`):
+- **Intel Mac (x86_64):** TensorFlow 2.17+ dropped macOS x86 builds. Use **Python 3.11 + TensorFlow 2.16.2** with `.venv311`:
+  ```bash
+  python3.11 -m venv .venv311
+  .venv311/bin/pip install "tensorflow==2.16.2" -r backend/requirements.txt
+  ```
+- **Apple Silicon:** Use `pip install tensorflow` (2.13+ has native support).
+- **Unit tests run without TensorFlow** — the model integration test skips when TensorFlow is unavailable.
+
+**Intel Mac: use `.venv311` for real ML model.** On Intel Mac, TensorFlow can crash with "Floating point exception" unless MKL/OneDNN are disabled. The inference module sets `TF_DISABLE_MKL=1` and `TF_ENABLE_ONEDNN_OPTS=0` automatically, but for manual runs:
+```bash
+export TF_DISABLE_MKL=1 TF_ENABLE_ONEDNN_OPTS=0
 ```
 
 If you already have `.venv` with dependencies installed, just activate it and run (see below).
 
 ## Run
 
-**Important:** Run from the **project root** (the folder that contains `app/` and `backend/`), so Python can find the `backend` module. With `.venv` activated:
+**Important:** Run from the **project root** (the folder that contains `app/` and `backend/`), so Python can find the `backend` module.
+
+- **Real ML model (Intel Mac):** Use `.venv311` (TensorFlow 2.16.2 + Python 3.11)
+- **Other platforms:** Use `.venv` or `venv`
 
 ```bash
 cd "/path/to/CarotidCheck app"
-source backend/.venv/bin/activate
-# Or: .venv at project root
+# Intel Mac: real Attention U-Net model
+source .venv311/bin/activate
+# Or: .venv / venv
 source .venv/bin/activate
 uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 ```

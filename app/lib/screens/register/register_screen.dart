@@ -9,7 +9,6 @@ import '../../core/widgets/responsive_layout.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
 
-/// Registration: name, district, approval code, password. Optional phone for SMS ID delivery.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 

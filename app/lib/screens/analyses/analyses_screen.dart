@@ -10,7 +10,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Analyses list - past carotid scan results from backend
 class AnalysesScreen extends StatefulWidget {
   const AnalysesScreen({super.key});
 
@@ -27,6 +26,31 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _openAnalysisResult(BuildContext context, AnalysisModel a) async {
+    if (a.id.isEmpty) return;
+    String? imageBase64;
+    if (a.hasImage) {
+      final auth = context.read<AuthService>();
+      final res = await auth.api.getScanImage(a.id);
+      if (res.success && res.data != null) imageBase64 = res.data;
+    }
+    if (!context.mounted) return;
+    context.push('/result/${a.id}', extra: {
+      'risk': a.risk,
+      'imt': a.imt,
+      'stenosisPct': a.stenosisPct,
+      'stenosisSource': a.stenosisSource,
+      'plaqueDetected': a.plaqueDetected,
+      'patientName': a.patientName,
+      'patientIdentifier': a.patientName ?? '',
+      'analyzedAt': a.analyzedAt.toIso8601String(),
+      if (imageBase64 != null) ...{
+        'segmentationOverlayBase64': imageBase64,
+        'hasAiOverlay': true,
+      },
+    });
   }
 
   Future<void> _load() async {
@@ -50,7 +74,10 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
             analyzedAt: m['created_at'] != null ? DateTime.tryParse(m['created_at'] as String) ?? DateTime.now() : DateTime.now(),
             risk: (m['risk_level'] as String? ?? 'low').toLowerCase(),
             imt: (m['imt_mm'] as num?)?.toDouble() ?? 0.0,
+            stenosisPct: (m['stenosis_pct'] as num?)?.toDouble(),
+            stenosisSource: m['stenosis_source'] as String?,
             plaqueDetected: m['plaque_detected'] as bool?,
+            hasImage: m['has_image'] as bool? ?? false,
           );
         }).toList();
         _loading = false;
@@ -151,14 +178,7 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
                                 analysis: a,
                                 riskColor: _riskColor(a.risk),
                                 riskLabel: _riskLabel(a.risk),
-                                onTap: () => context.push('/result', extra: {
-                                  'risk': a.risk,
-                                  'imt': a.imt,
-                                  'plaqueDetected': a.plaqueDetected,
-                                  'patientName': a.patientName,
-                                  'analyzedAt': a.analyzedAt.toIso8601String(),
-                                  'fromAnalyses': true,
-                                }),
+                                onTap: () => _openAnalysisResult(context, a),
                               )),
                         ],
                       ),
@@ -185,6 +205,11 @@ class _AnalysisCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateStr = DateFormat('MMM d, y • HH:mm').format(analysis.analyzedAt);
+    final parts = [dateStr, 'IMT: ${analysis.imt.toStringAsFixed(1)} mm', '$riskLabel risk'];
+    if (analysis.stenosisPct != null) {
+      parts.add('Stenosis: ${analysis.stenosisPct!.toStringAsFixed(1)}%');
+    }
+    final subtitle = parts.join(' • ');
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -197,7 +222,7 @@ class _AnalysisCard extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          '$dateStr\nIMT: ${analysis.imt.toStringAsFixed(1)} mm • $riskLabel risk',
+          subtitle,
           style: TextStyle(color: Colors.grey[600], fontSize: 13),
         ),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),

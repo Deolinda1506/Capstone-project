@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Distinctive action card with gradient accent, shadow, and medical styling
 class QuickActionCard extends StatelessWidget {
   final IconData icon;
   final String title;

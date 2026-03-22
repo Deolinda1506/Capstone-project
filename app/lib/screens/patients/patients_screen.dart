@@ -8,7 +8,6 @@ import '../../core/services/auth_service.dart';
 import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Patients list - village-filtered (from backend)
 class PatientsScreen extends StatefulWidget {
   const PatientsScreen({super.key});
 

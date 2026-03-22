@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/l10n_extension.dart';
 
-/// Shell scaffold with bottom navigation bar for main app screens
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -24,11 +23,6 @@ class MainShell extends StatelessWidget {
             icon: const Icon(Icons.home_outlined),
             selectedIcon: const Icon(Icons.home),
             label: l10n.t('home'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.local_hospital_outlined),
-            selectedIcon: const Icon(Icons.local_hospital),
-            label: l10n.t('hospitalDashboard'),
           ),
           NavigationDestination(
             icon: const Icon(Icons.settings_outlined),

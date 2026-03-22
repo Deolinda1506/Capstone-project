@@ -1,4 +1,4 @@
-"""FastAPI app: SQLAlchemy · Pydantic v2 · JWT · Firebase · Swin-UNETR. SQLite (dev) / PostgreSQL (prod)."""
+"""FastAPI app: SQLAlchemy · Pydantic v2 · JWT · Attention U-Net. SQLite (dev) / PostgreSQL (prod)."""
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,12 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.database import engine, Base
 import backend.models  # noqa: F401 — register models
 from backend.routers import auth, patients, scans
-
-try:
-    import backend.firebase_config  # Initialize Firebase on startup
-except ImportError:
-    pass
-
 
 def _ensure_sqlite_columns():
     """Add missing columns to existing SQLite tables (e.g. after model changes)."""
@@ -25,7 +19,7 @@ def _ensure_sqlite_columns():
         with engine.connect() as conn:
             r = conn.execute(text("PRAGMA table_info(users)"))
             cols = {row[1] for row in r}
-        need_alter = any(c not in cols for c in ("password_reset_token", "password_reset_expires", "staff_id", "facility", "status"))
+        need_alter = any(c not in cols for c in ("password_reset_token", "password_reset_expires", "staff_id", "facility", "status", "hospital_id"))
         if need_alter:
             with engine.begin() as conn:
                 if "password_reset_token" not in cols:
@@ -38,6 +32,20 @@ def _ensure_sqlite_columns():
                     conn.execute(text("ALTER TABLE users ADD COLUMN facility VARCHAR(255)"))
                 if "status" not in cols:
                     conn.execute(text("ALTER TABLE users ADD COLUMN status VARCHAR(20) DEFAULT 'approved'"))
+                if "hospital_id" not in cols:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN hospital_id VARCHAR(36)"))
+    except Exception:
+        pass
+    try:
+        with engine.connect() as conn:
+            r = conn.execute(text("PRAGMA table_info(results)"))
+            res_cols = {row[1] for row in r}
+        if "stenosis_pct" not in res_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE results ADD COLUMN stenosis_pct REAL"))
+        if "stenosis_source" not in res_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE results ADD COLUMN stenosis_source VARCHAR(32)"))
     except Exception:
         pass
 
@@ -60,7 +68,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="CarotidCheck API",
-    description="Carotid ultrasound analysis for stroke triage. FastAPI · SQLAlchemy · Firebase · Pydantic v2 · JWT.",
+    description="Carotid ultrasound analysis for stroke triage. FastAPI · SQLAlchemy · Pydantic v2 · JWT.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -98,3 +106,13 @@ def ml_status():
         return {"ml_ready": True, "overlay_available": True}
     except Exception as e:
         return {"ml_ready": False, "overlay_available": False, "error": str(e)}
+
+
+@app.get("/latency")
+def latency():
+    """
+    Latency statistics for inference (rolling window of last 100 requests).
+    Used for real-time triage latency analysis.
+    """
+    from backend.latency import get_latency_stats
+    return get_latency_stats()

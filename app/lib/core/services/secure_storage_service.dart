@@ -43,4 +43,9 @@ class SecureStorageService {
 
   Future<String?> getAuthToken() => read(AppConstants.keyAuthToken);
 
+  Future<void> saveCachedPasswordHash(String hash) =>
+      write(AppConstants.keyCachedPasswordHash, hash);
+
+  Future<String?> getCachedPasswordHash() =>
+      read(AppConstants.keyCachedPasswordHash);
 }

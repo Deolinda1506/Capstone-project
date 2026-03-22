@@ -11,9 +11,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Scan screen - capture carotid ultrasound, upload to backend for analysis
-/// Images stored in app-private encrypted storage (not Photo Gallery)
-/// Uses Image.memory for web compatibility (Image.file not supported on web)
+// Carotid scan capture + upload. Uses Image.memory on web (Image.file not supported).
 class ScanScreen extends StatefulWidget {
   final PatientModel? patient;
 
@@ -35,14 +33,20 @@ class _ScanScreenState extends State<ScanScreen> {
 
     setState(() => _uploading = true);
     try {
+      final patientEmail = widget.patient?.email;
       if (patientId == null || patientId.isEmpty) {
-        final createRes = await api.createPatient(identifier: null, facility: 'Gasabo');
+        final createRes = await api.createPatient(
+          identifier: null,
+          email: patientEmail,
+          facility: 'Gasabo',
+        );
         if (createRes.success && createRes.data != null) {
           patientId = createRes.data!['identifier'] as String? ?? createRes.data!['id'] as String?;
         }
       } else {
         final createRes = await api.createPatient(
           identifier: patientId,
+          email: patientEmail,
           facility: 'Gasabo',
         );
         if (createRes.success) {
@@ -55,26 +59,45 @@ class _ScanScreenState extends State<ScanScreen> {
         );
         return;
       }
-      final uploadRes = await api.uploadScan(patientId, _imageBytes!);
+      final uploadRes = await api.uploadScan(
+        patientId,
+        _imageBytes!,
+        patientAge: widget.patient?.age,
+      );
       if (!mounted) return;
       if (uploadRes.success && uploadRes.data != null) {
+        final scan = uploadRes.data!['scan'] as Map<String, dynamic>?;
+        final scanId = scan?['id'] as String? ?? '';
         final result = uploadRes.data!['result'] as Map<String, dynamic>?;
         final risk = (result?['risk_level'] as String? ?? 'low').toLowerCase();
         final imt = (result?['imt_mm'] as num?)?.toDouble() ?? 0.0;
+        final stenosisPct = (uploadRes.data!['stenosis_pct'] as num?)?.toDouble();
+        final stenosisSource = uploadRes.data!['stenosis_source'] as String?;
         final plaqueDetected = uploadRes.data!['plaque_detected'] as bool?;
         final overlayBase64 = uploadRes.data!['segmentation_overlay_base64'] as String?;
         final hasAiOverlay = uploadRes.data!['has_ai_overlay'] as bool? ?? false;
+        final patientAge = uploadRes.data!['patient_age'] as int?;
         final originalImageBase64 = overlayBase64 ?? base64Encode(_imageBytes!);
-        if (mounted) context.push('/result', extra: {
-          'risk': risk,
-          'imt': imt,
-          'plaqueDetected': plaqueDetected,
-          'patientName': widget.patient?.name,
-          'analyzedAt': DateTime.now().toIso8601String(),
-          'segmentationOverlayBase64': overlayBase64,
-          'originalImageBase64': originalImageBase64,
-          'hasAiOverlay': hasAiOverlay,
-        });
+        if (mounted && scanId.isNotEmpty) {
+          context.push('/result/$scanId', extra: {
+            'risk': risk,
+            'imt': imt,
+            'stenosisPct': stenosisPct,
+            'stenosisSource': stenosisSource,
+            'plaqueDetected': plaqueDetected,
+            'patientName': widget.patient?.name,
+            'patientIdentifier': patientId,
+            'analyzedAt': DateTime.now().toIso8601String(),
+            'segmentationOverlayBase64': overlayBase64,
+            'originalImageBase64': originalImageBase64,
+            'hasAiOverlay': hasAiOverlay,
+            if (patientAge != null) 'patientAge': patientAge,
+          });
+        } else if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(context.l10n.t('analysisFailed'))),
+          );
+        }
       } else {
         messenger.showSnackBar(
           SnackBar(content: Text(uploadRes.error ?? context.l10n.t('analysisFailed'))),

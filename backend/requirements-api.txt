@@ -1,4 +1,4 @@
-# Backend API only (~50 MB). No torch/MONAI/opencv - use when disk space is low.
+# Backend API only (~50 MB). No TensorFlow/opencv - use when disk space is low.
 # Auth, patients, scans work; /predict and /scans/upload return stub results without ML model.
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0

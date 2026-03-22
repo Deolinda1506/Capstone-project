@@ -14,11 +14,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class FirebaseLoginRequest(BaseModel):
-    """Firebase ID token from client (e.g. user.getIdToken())."""
-    id_token: str
-
-
 class IdentifierLoginRequest(BaseModel):
     """Login with phone / staff ID / email identifier."""
     identifier: str

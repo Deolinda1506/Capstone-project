@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/services/auth_service.dart';
 import '../../screens/onboarding/onboarding_screen.dart' as onboarding;
 import '../../core/services/sync_service.dart';
@@ -7,7 +8,6 @@ import '../../core/l10n/l10n_extension.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Login: District ID + password
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
   final SyncService syncService;
@@ -71,8 +71,8 @@ class _LoginScreenState extends State<LoginScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0D47A1),
-              Color(0xFF1565C0),
+              AppTheme.primaryBlue,
+              AppTheme.primaryBlueLight,
             ],
           ),
         ),

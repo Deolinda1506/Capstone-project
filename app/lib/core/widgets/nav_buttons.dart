@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/l10n_extension.dart';
 
-/// Tab order for main shell navigation (Home, Settings only)
 const List<String> _tabPaths = ['/', '/settings'];
 
 int? _tabIndex(String location) {
@@ -31,7 +30,6 @@ String? _prevPath(String location) {
   return _tabPaths[idx - 1];
 }
 
-/// True when on a nested route (e.g. /referrals/hospitals), not a top-level tab.
 bool _isNestedRoute(String location) {
   for (final p in _tabPaths) {
     if (location != p && location.startsWith('$p/')) return true;
@@ -41,7 +39,6 @@ bool _isNestedRoute(String location) {
   return segments.length >= 2;
 }
 
-/// Back button - pops when on nested route, else goes to previous tab
 Widget navBackButton(BuildContext context) {
   final location = GoRouterState.of(context).matchedLocation;
   final prev = _prevPath(location);
@@ -60,7 +57,6 @@ Widget navBackButton(BuildContext context) {
   );
 }
 
-/// Next button - goes to next tab
 Widget navNextButton(BuildContext context) {
   final location = GoRouterState.of(context).matchedLocation;
   final next = _nextPath(location);

@@ -1,11 +1,16 @@
-"""Carotid wall thickness inference (Attention U-Net). Used by /predict and /scans/upload."""
+"""IMT inference via Attention U-Net. Used by /predict and /scans/upload."""
 import base64
 import logging
+import os
 import time
 from pathlib import Path
 
 import cv2
 import numpy as np
+
+# Disable MKL/OneDNN to avoid Floating Point Exception on Intel Mac (TF 2.16)
+os.environ.setdefault("TF_DISABLE_MKL", "1")
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _MODEL_PATH = _PROJECT_ROOT / "ML" / "AttentionUNet.keras"
@@ -22,24 +27,34 @@ else:
 
 
 def load_model():
-    """Load the Attention U-Net model (best performer from ViT vs Attention U-Net comparison)."""
     import tensorflow as tf
+
+    # Import custom layers so they are registered before load_model
+    import sys
+    _ml_root = _PROJECT_ROOT / "ML"
+    if str(_ml_root) not in sys.path:
+        sys.path.insert(0, str(_PROJECT_ROOT))
+    from ML.model_layers import EncoderBlock, DecoderBlock, AttentionGate  # noqa: F401
+
     global model
     if model is not None:
         return model
     if not _MODEL_PATH.exists():
         raise FileNotFoundError(f"Model not found at {_MODEL_PATH}")
-    model_obj = tf.keras.models.load_model(str(_MODEL_PATH), compile=False)
+    custom_objects = {
+        "EncoderBlock": EncoderBlock,
+        "DecoderBlock": DecoderBlock,
+        "AttentionGate": AttentionGate,
+    }
+    model_obj = tf.keras.models.load_model(
+        str(_MODEL_PATH), custom_objects=custom_objects, compile=False
+    )
     model = model_obj
     print(f"✅ Attention U-Net model loaded from {_MODEL_PATH}")
     return model
 
 
 def _preprocess_for_attention_unet(image_bytes: bytes) -> tuple[np.ndarray, np.ndarray, int, int]:
-    """
-    Preprocess image to match notebook pipeline: pad to square, resize to 256x256, RGB, [0,1].
-    Returns (preprocessed_array, original_gray, orig_h, orig_w) for IMT scaling and overlay.
-    """
     nparr = np.frombuffer(image_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
@@ -93,6 +108,21 @@ def _lumen_diameter_px_per_column(mask, min_gap_px: int = 3) -> np.ndarray:
         if np.any(gaps >= min_gap_px):
             lumen_px[x] = float(np.max(gaps))
     return lumen_px
+
+
+def _get_imt_thresholds(patient_age: int | None) -> tuple[float, float]:
+    """
+    Age-specific IMT thresholds (mm) for stroke risk.
+    IMT naturally thickens with age; thresholds from NIH/AHA clinical guidelines.
+    Returns (moderate_mm, high_mm): Low < moderate, Moderate in [moderate, high], High > high.
+    """
+    if patient_age is None or patient_age < 0:
+        return (0.9, 1.2)  # Default: Low <0.9, Moderate 0.9–1.2, High >1.2
+    if patient_age < 40:
+        return (0.8, 1.0)   # Younger: stricter (Low <0.8, Moderate 0.8–1.0, High >1.0)
+    if patient_age < 60:
+        return (0.9, 1.1)   # Middle-aged (Low <0.9, Moderate 0.9–1.1, High >1.1)
+    return (0.9, 1.2)       # Older (≥60): standard thresholds
 
 
 def _stenosis_pct_nascet(D_stenosis_mm: float, D_distal_mm: float) -> float:
@@ -154,6 +184,7 @@ def predict_imt(
     image_bytes: bytes,
     spacing_mm_per_pixel: float = DEFAULT_SPACING_MM_PER_PIXEL,
     return_segmentation_overlay: bool = True,
+    patient_age: int | None = None,
 ) -> dict:
     """Run inference; returns imt_mm, risk_level, foreground_prob, inference_time_sec, and optionally segmentation_overlay_base64."""
     t0 = time.perf_counter()
@@ -179,12 +210,14 @@ def predict_imt(
     # D_stenosis = narrowest lumen diameter; D_distal = normal distal reference
     lumen_px = _lumen_diameter_px_per_column(pred_class)
     stenosis_pct = np.nan
+    stenosis_source = "imt_correlation"  # Default: fallback when both walls not detected
     if np.any(np.isfinite(lumen_px)):
         lumen_mm = lumen_px * effective_spacing
         D_stenosis_mm = float(np.nanmin(lumen_mm))  # Narrowest residual lumen
         D_distal_mm = float(np.nanmax(lumen_mm))   # Normal distal reference (widest segment)
         if D_distal_mm > 0:
             stenosis_pct = _stenosis_pct_nascet(D_stenosis_mm, D_distal_mm)
+            stenosis_source = "nascet"  # Both walls segmented; true lumen-based NASCET
     if not np.isfinite(stenosis_pct):
         # Fallback: derive from IMT–stenosis correlation when mask has single wall only
         if imt_mm < 0.9:
@@ -194,11 +227,10 @@ def predict_imt(
         else:
             stenosis_pct = min(99.0, 70.0 + (imt_mm - 1.2) * 10.0)
 
-    # Clinical thresholds (NASCET-aligned): Low <0.9 mm, Moderate 0.9–1.2 mm, High >1.2 mm
-    WALL_THICKNESS_HIGH_MM = 1.2
-    WALL_THICKNESS_MODERATE_MM = 0.9
-    risk_level = "High" if imt_mm > WALL_THICKNESS_HIGH_MM else "Moderate" if imt_mm >= WALL_THICKNESS_MODERATE_MM else "Low"
-    is_high_risk = imt_mm > WALL_THICKNESS_HIGH_MM
+    # Risk thresholds: use age-specific when patient_age provided (NIH-aligned); else fixed
+    moderate_mm, high_mm = _get_imt_thresholds(patient_age)
+    risk_level = "High" if imt_mm > high_mm else "Moderate" if imt_mm >= moderate_mm else "Low"
+    is_high_risk = imt_mm > high_mm
 
     overlay_b64 = None
     has_ai_overlay = False
@@ -227,6 +259,7 @@ def predict_imt(
         "risk_level": risk_level,
         "is_high_risk": is_high_risk,
         "stenosis_pct": round(float(stenosis_pct), 1) if np.isfinite(stenosis_pct) else None,
+        "stenosis_source": stenosis_source,  # "nascet" = lumen-based; "imt_correlation" = estimated
         "foreground_prob": round(foreground_prob, 3),
         "inference_time_sec": round(inference_time_sec, 3),
         "segmentation_overlay_base64": overlay_b64,

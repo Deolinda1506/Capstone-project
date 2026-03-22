@@ -42,4 +42,8 @@ class ScanUploadResponse(BaseModel):
     result: ResultResponse
     segmentation_overlay_base64: str | None = None  # PNG overlay (green = wall) for display
     has_ai_overlay: bool = False  # True when overlay is from AI segmentation (green mask)
-    plaque_detected: bool | None = None  # Derived from IMT: True if IMT >= 2.0 mm
+    plaque_detected: bool | None = None  # Derived from IMT: True if IMT >= 0.9 mm
+    stenosis_pct: float | None = None  # NASCET: (1 - D_stenosis/D_distal) × 100
+    stenosis_source: str | None = None  # "nascet" = lumen-based (both walls); "imt_correlation" = estimated
+    inference_time_sec: float | None = None  # Latency of AI inference (seconds)
+    patient_age: int | None = None  # When provided, age-specific IMT thresholds were applied

@@ -1,7 +1,6 @@
 import 'user_role.dart';
 import 'location_model.dart';
 
-/// User model with RBC-compliant fields
 class UserModel {
   final String id;
   final String? phoneNumber;

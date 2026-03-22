@@ -1,4 +1,3 @@
-/// CarotidCheck - RBC-compliant carotid ultrasound screening app
 
 class AppConstants {
   AppConstants._();
@@ -15,4 +14,5 @@ class AppConstants {
   static const String keyUserId = 'user_id';
   static const String keyUserData = 'user_data';
   static const String keySyncStatus = 'sync_status';
+  static const String keyCachedPasswordHash = 'cached_password_hash';
 }

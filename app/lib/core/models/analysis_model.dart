@@ -1,4 +1,3 @@
-/// Analysis/scan result model for carotid ultrasound
 class AnalysisModel {
   final String id;
   final String? patientId;
@@ -8,9 +7,12 @@ class AnalysisModel {
   final DateTime analyzedAt;
   final String risk; // low, moderate, high
   final double imt; // intima-media thickness (mm)
+  final double? stenosisPct; // NASCET %
+  final String? stenosisSource; // "nascet" | "imt_correlation"
   final bool? plaqueDetected;
   final String? notes;
   final String? imagePath; // local path or URL for thumbnail
+  final bool hasImage; // true when scan image is stored for doctor view
 
   const AnalysisModel({
     required this.id,
@@ -21,9 +23,12 @@ class AnalysisModel {
     required this.analyzedAt,
     required this.risk,
     required this.imt,
+    this.stenosisPct,
+    this.stenosisSource,
     this.plaqueDetected,
     this.notes,
     this.imagePath,
+    this.hasImage = false,
   });
 
   factory AnalysisModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +44,7 @@ class AnalysisModel {
       plaqueDetected: json['plaque_detected'] as bool?,
       notes: json['notes'] as String?,
       imagePath: json['image_path'] as String?,
+      hasImage: json['has_image'] as bool? ?? false,
     );
   }
 
@@ -54,5 +60,6 @@ class AnalysisModel {
         'plaque_detected': plaqueDetected,
         'notes': notes,
         'image_path': imagePath,
+        'has_image': hasImage,
       };
 }

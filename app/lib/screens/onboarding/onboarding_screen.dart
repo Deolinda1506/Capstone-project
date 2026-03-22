@@ -24,7 +24,6 @@ Future<void> clearOnboardingComplete() async {
   await prefs.remove(_keyOnboardingComplete);
 }
 
-/// Onboarding: Page 1 = Logo, Page 2 = How it works, Page 3 = Intro (Meet CarotidCheck)
 class OnboardingScreen extends StatefulWidget {
   final AuthService authService;
   final SyncService syncService;
@@ -65,30 +64,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             end: Alignment.bottomRight,
             colors: isDark
                 ? [const Color(0xFF1E1E1E), const Color(0xFF121212)]
-                : [const Color(0xFF0D47A1), const Color(0xFF1565C0)],
+                : [AppTheme.primaryBlue, AppTheme.primaryBlueLight],
           ),
         ),
         child: SafeArea(
           child: Stack(
             children: [
               PageView(
-                controller: _pageController,
+          controller: _pageController,
                 onPageChanged: (i) => setState(() => _currentPage = i),
-                children: [
-                  _LogoPage(
-                    onNext: () => _pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    ),
-                  ),
+          children: [
+            _LogoPage(
+              onNext: () => _pageController.nextPage(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              ),
+            ),
                   _PurposePage(
                     onNext: () => _pageController.nextPage(
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeInOut,
                     ),
                   ),
-                  _IntroPage(onComplete: _complete),
-                ],
+            _IntroPage(onComplete: _complete),
+          ],
               ),
               if (_currentPage < 2)
                 Positioned(
@@ -191,8 +190,8 @@ class _PurposePage extends StatelessWidget {
           Builder(
             builder: (context) => Text(
               context.l10n.t('onboardingPurposeTitle'),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
               textAlign: TextAlign.center,
@@ -205,8 +204,8 @@ class _PurposePage extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Colors.white70,
                     height: 1.5,
-                  ),
-              textAlign: TextAlign.center,
+                ),
+            textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 40),
@@ -248,7 +247,7 @@ class _IntroPage extends StatelessWidget {
           Builder(
             builder: (context) {
               final l10n = context.l10n;
-                return Text(
+              return Text(
                 l10n.t('meetCarotidCheck'),
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,

@@ -8,7 +8,6 @@ import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Referral screen - referral list only. Use FAB to add referrals from hospital list.
 class ReferralScreen extends StatefulWidget {
   const ReferralScreen({super.key});
 

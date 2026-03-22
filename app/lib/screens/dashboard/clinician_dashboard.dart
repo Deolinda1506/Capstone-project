@@ -9,8 +9,6 @@ import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/quick_action_card.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Level 2: Hospital Clinician - Advanced UI
-/// Focus: Review AI Segmentation → Clinical Validation → Treatment Plan
 class ClinicianDashboard extends StatelessWidget {
   final UserModel user;
   final SyncService syncService;
@@ -60,14 +58,6 @@ class ClinicianDashboard extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 28),
-              QuickActionCard(
-                icon: Icons.medical_services,
-                title: context.l10n.t('hospitalDashboard'),
-                subtitle: context.l10n.t('incomingReferrals'),
-                color: AppTheme.riskHigh,
-                onTap: () => context.go('/hospital-dashboard'),
-              ),
-              const SizedBox(height: 20),
               _SectionTitle(title: context.l10n.t('reviewValidation')),
               const SizedBox(height: 14),
               QuickActionCard(

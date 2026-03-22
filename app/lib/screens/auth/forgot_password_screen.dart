@@ -6,7 +6,6 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/responsive_layout.dart';
 
-/// Forgot password - request reset email
 class ForgotPasswordScreen extends StatefulWidget {
   final AuthService authService;
 

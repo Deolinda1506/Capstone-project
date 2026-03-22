@@ -24,12 +24,12 @@ Yes, you can deploy the backend. Follow this checklist.
 
 ### ML model (optional)
 
-The Blueprint uses `requirements-api.txt` (no PyTorch/MONAI) so it fits Render’s free tier. Auth, patients, and scans work; `/predict` and AI overlay return stub results.
+The Blueprint uses `requirements-api.txt` (no TensorFlow) so it fits Render’s free tier. Auth, patients, and scans work; `/predict` and AI overlay return stub results.
 
 To enable full ML on a paid plan:
 
 1. In Render Dashboard → your service → **Settings** → change **Build Command** to: `pip install -r backend/requirements.txt`.
-2. Add the model file `ML/models/carotid_swin_unetr_2d.pt` to your repo (or fetch it at build time). Allocate at least 2GB RAM for the service.
+2. Add the model file `ML/AttentionUNet.keras` to your repo (or fetch it at build time). Allocate at least 2GB RAM for the service.
 
 ### Render free tier: slow first request (cold start)
 
@@ -60,11 +60,14 @@ Set these on your host or platform:
 - **DATABASE_URL** — use PostgreSQL in prod, e.g. `postgresql://user:pass@host:5432/carotidcheck`
 - Optional: **SMTP_HOST**, **SMTP_PORT**, **SMTP_USER**, **SMTP_PASSWORD**, **EMAIL_FROM** (for welcome/referral emails)
 - Optional: **AFRICAS_TALKING_USERNAME**, **AFRICAS_TALKING_API_KEY**, **AFRICAS_TALKING_CLINICIAN_PHONES** (for SMS alerts when high-risk and CHW ID delivery)
+  - **Sandbox (free):** Use `AFRICAS_TALKING_USERNAME=sandbox` and your sandbox API key from [Africa's Talking](https://account.africastalking.com/). Messages are simulated and not delivered to real phones. Copy `.env.example` to `.env` and fill in the sandbox values.
 - Optional: **APPROVAL_CODES** — district approval codes to restrict registration (format: `0102:gasabo2024,0101:nyarugenge2024`). Only CHWs with the correct code from their supervisor can register for that district.
 
 ## 2. ML model
 
-Ensure `ML/models/carotid_swin_unetr_2d.pt` (or `carotid_swin_unetr_2d_final/`) is present in the deployed environment so `/predict` works. If missing, the server starts but the first `/predict` call will fail. When using Docker, the Dockerfile copies the `ML/` folder.
+Ensure `ML/AttentionUNet.keras` is present in the deployed environment so `/scans/upload` and AI overlay work. If missing, the server starts but the first scan upload will fail. When using Docker, the Dockerfile copies the `ML/` folder.
+
+**Database migrations:** If upgrading an existing deployment, add columns to `results` (PostgreSQL): `stenosis_pct REAL`, `stenosis_source VARCHAR(32)`. SQLite (dev) auto-adds these on startup.
 
 ## 3. Docker (from project root)
 

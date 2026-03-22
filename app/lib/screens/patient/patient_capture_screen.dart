@@ -10,7 +10,6 @@ import '../../core/widgets/responsive_layout.dart';
 import 'patient_consent_screen.dart';
 import 'patient_scan_io.dart' if (dart.library.html) 'patient_scan_web.dart' as scan;
 
-/// Patient registration: assign unique ID (CC-XXXX) + consent
 class PatientCaptureScreen extends StatefulWidget {
   const PatientCaptureScreen({super.key});
 
@@ -24,6 +23,7 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
   String? _name;
   int? _age;
   String? _gender;
+  String? _email;
   bool _isScanning = false;
 
   Future<void> _scanId() async {
@@ -154,6 +154,19 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
                   onChanged: (v) => setState(() => _gender = v),
                   validator: (v) => v == null ? context.l10n.t('required') : null,
                 ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  key: ValueKey(_email),
+                  initialValue: _email,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.t('emailOptional'),
+                    hintText: context.l10n.t('emailOptionalHint'),
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  autocorrect: false,
+                  onSaved: (v) => _email = v?.trim().isEmpty ?? true ? null : v?.trim(),
+                ),
                 const SizedBox(height: 32),
                 FilledButton(
                   onPressed: () async {
@@ -165,6 +178,7 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
                         name: _name,
                         age: _age,
                         gender: _gender,
+                        email: _email,
                       );
                       if (context.mounted) {
                         context.push(

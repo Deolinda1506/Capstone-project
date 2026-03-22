@@ -13,6 +13,8 @@ class Result(Base):
     imt_mm = Column(Float, nullable=False)
     risk_level = Column(String(20), nullable=False)  # "Low", "Moderate", "High"
     is_high_risk = Column(Boolean, nullable=False)
+    stenosis_pct = Column(Float, nullable=True)  # NASCET % when available
+    stenosis_source = Column(String(32), nullable=True)  # "nascet" | "imt_correlation"
     model_version = Column(String(64))
     created_at = Column(DateTime, default=datetime.utcnow)
 
