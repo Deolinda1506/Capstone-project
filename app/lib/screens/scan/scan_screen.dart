@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -210,12 +211,27 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final xfile = await picker.pickImage(
-      source: source,
-      imageQuality: 85,
-      // Helps on mobile browsers that support camera capture; ignored on gallery.
-      preferredCameraDevice: CameraDevice.rear,
-    );
+    XFile? xfile;
+    try {
+      xfile = await picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        // Helps on mobile browsers that support camera capture; ignored on gallery.
+        preferredCameraDevice: CameraDevice.rear,
+      );
+    } catch (_) {
+      // iOS simulators and some environments do not expose a camera.
+      if (source == ImageSource.camera) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Camera is unavailable here. Opening gallery instead.'),
+            ),
+          );
+        }
+        xfile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      }
+    }
     if (xfile != null) {
       final bytes = await xfile.readAsBytes();
       if (mounted) {
@@ -223,6 +239,18 @@ class _ScanScreenState extends State<ScanScreen> {
           _imageBytes = bytes;
         });
       }
+    }
+  }
+
+  Future<void> _pickFromFiles() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+      allowMultiple: false,
+    );
+    final bytes = result?.files.single.bytes;
+    if (bytes != null && mounted) {
+      setState(() => _imageBytes = bytes);
     }
   }
 
@@ -383,21 +411,32 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
                 ),
               const SizedBox(height: 24),
-              Row(
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
-                  Expanded(
+                  SizedBox(
+                    width: 220,
                     child: OutlinedButton.icon(
                       onPressed: () => _pickImage(ImageSource.camera),
                       icon: const Icon(Icons.camera_alt),
                       label: Text(context.l10n.t('camera')),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
+                  SizedBox(
+                    width: 220,
                     child: OutlinedButton.icon(
                       onPressed: () => _pickImage(ImageSource.gallery),
                       icon: const Icon(Icons.photo_library),
                       label: Text(context.l10n.t('gallery')),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 220,
+                    child: OutlinedButton.icon(
+                      onPressed: _pickFromFiles,
+                      icon: const Icon(Icons.folder_open),
+                      label: const Text('Files (Downloads)'),
                     ),
                   ),
                 ],

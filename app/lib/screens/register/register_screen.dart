@@ -163,6 +163,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     final l10n = context.l10n;
                     return DropdownButtonFormField<DistrictOption>(
                       value: _selectedDistrict,
+                      isExpanded: true,
                       decoration: InputDecoration(
                         labelText: l10n.t('district'),
                         hintText: l10n.t('selectDistrict'),
@@ -171,9 +172,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       items: rwandaDistricts.map((d) {
                         return DropdownMenuItem(
                           value: d,
-                          child: Text(l10n.t('districtFormat', {'name': d.name, 'id': d.idCode, 'province': d.province})),
+                          child: Text(
+                            l10n.t('districtFormat', {
+                              'name': d.name,
+                              'id': d.idCode,
+                              'province': d.province,
+                            }),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         );
                       }).toList(),
+                      selectedItemBuilder: (context) {
+                        return rwandaDistricts.map((d) {
+                          return Text(
+                            '${d.name} (${d.idCode})',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          );
+                        }).toList();
+                      },
                       onChanged: (v) => setState(() => _selectedDistrict = v),
                       validator: (v) => v == null ? l10n.t('required') : null,
                     );

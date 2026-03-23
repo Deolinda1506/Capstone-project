@@ -25,11 +25,17 @@ class ChwDashboard extends StatelessWidget {
       appBar: AppBar(
         leading: navBackButton(context),
         title: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             const AppLogo(height: 36, showInAppBar: true),
             const SizedBox(width: 8),
-            Text(context.l10n.t('appName')),
+            Expanded(
+              child: Text(
+                context.l10n.t('appName'),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
           ],
         ),
         actions: [

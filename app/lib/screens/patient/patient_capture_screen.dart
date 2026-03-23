@@ -30,10 +30,25 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
   Future<void> _scanId() async {
     setState(() => _isScanning = true);
     try {
-      final xfile = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 90,
-      );
+      XFile? xfile;
+      try {
+        xfile = await _picker.pickImage(
+          source: ImageSource.camera,
+          imageQuality: 90,
+        );
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Camera is unavailable here. Opening gallery instead.'),
+            ),
+          );
+        }
+        xfile = await _picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 90,
+        );
+      }
       if (xfile == null || !mounted) return;
       final patient = await scan.scanId(xfile);
       if (mounted && patient != null) {

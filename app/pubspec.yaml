@@ -61,14 +61,12 @@ dependencies:
   # Africa's Talking SMS
   # (using http for direct API calls)
 
-  # OCR - Rwandan NID scanning
-  google_mlkit_text_recognition: ^0.15.1
-
   # Maps - OpenStreetMap (no API key required)
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
   url_launcher: ^6.3.0
   share_plus: ^10.1.4
+  file_picker: ^10.3.10
 
 dev_dependencies:
   flutter_test:
