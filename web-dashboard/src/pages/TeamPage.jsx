@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { getTeam } from '../api/client'
+import { useLocale } from '../context/LocaleContext'
 import './TeamPage.css'
 
 export default function TeamPage() {
+  const { t } = useLocale()
   const [team, setTeam] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -17,24 +19,36 @@ export default function TeamPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <div className="team-page"><div className="team-loading">Loading team…</div></div>
-  if (error) return <div className="team-page"><div className="team-error">{error}</div></div>
+  if (loading) {
+    return (
+      <div className="team-page">
+        <div className="team-loading">{t('team.loading')}</div>
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="team-page">
+        <div className="team-error">{error}</div>
+      </div>
+    )
+  }
 
   return (
     <div className="team-page">
-      <h1>Team</h1>
-      <p className="team-subtitle">Clinicians and CHWs in your organization (admin view)</p>
+      <h1>{t('team.title')}</h1>
+      <p className="team-subtitle">{t('team.subtitle')}</p>
       {team.length === 0 ? (
-        <div className="empty-state">No team members yet.</div>
+        <div className="empty-state">{t('team.empty')}</div>
       ) : (
         <div className="team-table-wrap">
           <table className="team-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Staff ID</th>
-                <th>Role</th>
+                <th>{t('team.thName')}</th>
+                <th>{t('team.thEmail')}</th>
+                <th>{t('team.thStaffId')}</th>
+                <th>{t('team.thRole')}</th>
               </tr>
             </thead>
             <tbody>
@@ -43,7 +57,11 @@ export default function TeamPage() {
                   <td>{u.display_name || '—'}</td>
                   <td>{u.email || '—'}</td>
                   <td>{u.staff_id || '—'}</td>
-                  <td><span className={`role-badge role-${(u.role || '').toLowerCase()}`}>{u.role || '—'}</span></td>
+                  <td>
+                    <span className={`role-badge role-${(u.role || '').toLowerCase()}`}>
+                      {u.role || '—'}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>

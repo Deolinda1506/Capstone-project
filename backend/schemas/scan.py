@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -47,3 +49,9 @@ class ScanUploadResponse(BaseModel):
     stenosis_source: str | None = None  # "nascet" = lumen-based (both walls); "imt_correlation" = estimated
     inference_time_sec: float | None = None  # Latency of AI inference (seconds)
     patient_age: int | None = None  # When provided, age-specific IMT thresholds were applied
+
+
+class ClinicianReviewUpdate(BaseModel):
+    """Hospital clinician/admin marks a referral as reviewed or reopens it."""
+    status: Literal["pending", "reviewed"] = "reviewed"
+    clinical_notes: str | None = Field(None, max_length=4000)

@@ -2,7 +2,12 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const TOKEN_KEY = 'carotidcheck_token'
 const USER_KEY = 'carotidcheck_user'
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+const trimmed = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '')
+/** In dev, empty VITE_API_URL uses same-origin + Vite proxy (see vite.config.js). Prod defaults to deployed API. */
+const API_BASE =
+  trimmed ||
+  (import.meta.env.DEV ? '' : 'https://carotidcheck-api.onrender.com')
 
 const AuthContext = createContext(null)
 
@@ -16,11 +21,20 @@ export function AuthProvider({ children }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier: identifier.trim(), password }),
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(err.detail || 'Login failed')
+    const text = await res.text()
+    let data = {}
+    if (text) {
+      try {
+        data = JSON.parse(text)
+      } catch {
+        data = {}
+      }
     }
-    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(
+        typeof data.detail === 'string' ? data.detail : `Login failed (${res.status})`,
+      )
+    }
     localStorage.setItem(TOKEN_KEY, data.access_token)
     localStorage.setItem(USER_KEY, JSON.stringify(data.user))
     setUser(data.user)

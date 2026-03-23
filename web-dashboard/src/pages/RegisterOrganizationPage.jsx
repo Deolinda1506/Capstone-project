@@ -26,19 +26,47 @@ export default function RegisterOrganizationPage() {
     setError('')
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/register-hospital`, {
+      const url = `${API_BASE}/auth/register-hospital`
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Registration failed')
+      const text = await res.text()
+      let data = {}
+      if (text) {
+        try {
+          data = JSON.parse(text)
+        } catch {
+          data = { detail: text.slice(0, 200) }
+        }
+      }
+      if (!res.ok) {
+        const msg =
+          typeof data.detail === 'string'
+            ? data.detail
+            : Array.isArray(data.detail)
+              ? data.detail.map((d) => d.msg || d).join('; ')
+              : `Server error (${res.status})`
+        throw new Error(msg)
+      }
       localStorage.setItem('carotidcheck_token', data.access_token)
       localStorage.setItem('carotidcheck_user', JSON.stringify(data.user))
       navigate('/dashboard')
       window.location.reload()
     } catch (err) {
-      setError(err.message || 'Registration failed')
+      const name = err?.name || ''
+      const msg = err?.message || ''
+      const isNetwork =
+        name === 'TypeError' ||
+        msg === 'Failed to fetch' ||
+        msg.includes('NetworkError') ||
+        msg.includes('Load failed')
+      setError(
+        isNetwork
+          ? `Cannot reach the API (${API_BASE || 'same-origin / Vite proxy'}). For local dev, use an empty VITE_API_URL and set DEV_PROXY_TARGET=https://carotidcheck-api.onrender.com in web-dashboard/.env, then restart npm run dev.`
+          : msg || 'Registration failed',
+      )
     } finally {
       setLoading(false)
     }

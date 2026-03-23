@@ -4,9 +4,10 @@ import hashlib
 import logging
 import os
 import time
+from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 from backend.database import get_db
 from backend.models import User, Patient, Scan, Result
-from backend.schemas.scan import ScanUploadResponse
+from backend.schemas.scan import ClinicianReviewUpdate, ScanUploadResponse
 from backend.auth import get_current_user_or_dev
 from backend import sms_alerts
 from backend import email_service
@@ -27,6 +28,24 @@ router = APIRouter(prefix="/scans", tags=["scans"])
 
 # Directory for storing scan images (overlay for doctor view). Create if missing.
 UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+
+
+def _review_fields(scan: Scan) -> dict:
+    return {
+        "clinician_review_status": scan.clinician_review_status or "pending",
+        "clinician_reviewed_at": scan.clinician_reviewed_at.isoformat() if scan.clinician_reviewed_at else None,
+        "clinician_reviewed_by_id": scan.clinician_reviewed_by_id,
+        "clinical_notes": scan.clinical_notes,
+    }
+
+
+def _require_clinician_or_admin(user: User) -> None:
+    role = (user.role or "").lower()
+    if role not in ("admin", "clinician"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only clinicians and admins can update referral review status",
+        )
 
 
 def _save_scan_image(scan_id: str, overlay_b64: str | None, original_bytes: bytes) -> str | None:
@@ -116,6 +135,7 @@ async def upload_scan_image(
         patient_id=patient.id,
         user_id=current_user.id,
         image_path=image_path,
+        clinician_review_status="pending" if pred["is_high_risk"] else "not_applicable",
     )
     db.add(scan)
     db.commit()
@@ -200,6 +220,7 @@ def list_scans_with_results(
             "stenosis_source": r.stenosis_source,
             "plaque_detected": r.imt_mm >= 0.9,
             "has_image": bool(s.image_path),
+            **_review_fields(s),
         }
         for s, r, p in rows
     ]
@@ -209,6 +230,10 @@ def list_scans_with_results(
 def list_high_risk_referrals(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     name: Annotated[str | None, Query(description="Filter by patient name (case-insensitive)")] = None,
+    review_status: Annotated[
+        Literal["pending", "reviewed", "all"],
+        Query(description="Hospital queue: pending vs reviewed high-risk referrals"),
+    ] = "all",
     db: Annotated[Session, Depends(get_db)] = ...,
     current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
@@ -233,6 +258,12 @@ def list_high_risk_referrals(
                 Patient.identifier.ilike(f"%{n}%"),
             )
         )
+    if review_status == "pending":
+        q = q.filter(
+            (Scan.clinician_review_status == "pending") | (Scan.clinician_review_status.is_(None))
+        )
+    elif review_status == "reviewed":
+        q = q.filter(Scan.clinician_review_status == "reviewed")
     q = q.order_by(Result.created_at.desc()).limit(limit)
     rows = q.all()
     return [
@@ -250,9 +281,65 @@ def list_high_risk_referrals(
             "stenosis_source": r.stenosis_source,
             "plaque_detected": r.imt_mm >= 0.9,
             "has_image": bool(s.image_path),
+            **_review_fields(s),
         }
         for s, r, p in rows
     ]
+
+
+@router.patch("/{scan_id}/review", status_code=status.HTTP_200_OK)
+def update_clinician_review(
+    scan_id: str,
+    body: ClinicianReviewUpdate,
+    db: Annotated[Session, Depends(get_db)] = ...,
+    current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
+):
+    """Mark a high-risk referral as reviewed (or reopen). Clinicians and admins only."""
+    _require_clinician_or_admin(current_user)
+    scan = db.get(Scan, scan_id)
+    if not scan or scan.is_deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan not found")
+    r = db.query(Result).filter(Result.scan_id == scan_id).first()
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Result not found")
+    patient = db.get(Patient, scan.patient_id)
+    if not patient:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
+    if not r.is_high_risk:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Review workflow applies to high-risk referrals only",
+        )
+    if body.status == "reviewed":
+        scan.clinician_review_status = "reviewed"
+        scan.clinician_reviewed_at = datetime.utcnow()
+        scan.clinician_reviewed_by_id = current_user.id
+        if body.clinical_notes is not None:
+            scan.clinical_notes = body.clinical_notes.strip() or None
+    else:
+        scan.clinician_review_status = "pending"
+        scan.clinician_reviewed_at = None
+        scan.clinician_reviewed_by_id = None
+        if body.clinical_notes is not None:
+            scan.clinical_notes = body.clinical_notes.strip() or None
+    db.commit()
+    db.refresh(scan)
+    return {
+        "scan_id": scan.id,
+        "patient_id": patient.id,
+        "patient_identifier": patient.identifier,
+        "patient_name": patient.name,
+        "patient_age": patient.age,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "imt_mm": r.imt_mm,
+        "risk_level": r.risk_level,
+        "is_high_risk": r.is_high_risk,
+        "stenosis_pct": r.stenosis_pct,
+        "stenosis_source": r.stenosis_source,
+        "plaque_detected": r.imt_mm >= 0.9,
+        "has_image": bool(scan.image_path),
+        **_review_fields(scan),
+    }
 
 
 @router.get("/{scan_id}/result")
@@ -291,6 +378,7 @@ def get_scan_result(
         "stenosis_source": r.stenosis_source,
         "plaque_detected": r.imt_mm >= 0.9,
         "has_image": bool(scan.image_path),
+        **_review_fields(scan),
     }
 
 

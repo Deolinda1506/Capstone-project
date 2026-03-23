@@ -1,20 +1,34 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getScanResult, fetchScanImageBlob } from '../api/client'
+import { getScanResult, fetchScanImageBlob, patchScanReview } from '../api/client'
+import { useAuth } from '../context/AuthContext'
+import { useLocale } from '../context/LocaleContext'
 import './ReferralPage.css'
 
 export default function ReferralPage() {
   const { scanId } = useParams()
+  const { user } = useAuth()
+  const { t, dateLocaleTag } = useLocale()
   const [result, setResult] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
   const [imageError, setImageError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const imageUrlRef = useRef(null)
 
+  const canReview =
+    user && ['admin', 'clinician'].includes((user.role || '').toLowerCase())
+
   useEffect(() => {
+    setLoading(true)
     getScanResult(scanId)
-      .then(setResult)
+      .then((data) => {
+        setResult(data)
+        setNotes(data.clinical_notes || '')
+      })
       .catch((err) => {
         setError(err.message || 'Failed to load referral')
         setResult(null)
@@ -41,67 +55,173 @@ export default function ReferralPage() {
     }
   }, [scanId, result?.has_image])
 
-  if (loading) return <div className="referral-page"><div className="referral-loading">Loading…</div></div>
-  if (error) return <div className="referral-page"><div className="referral-error">{error}</div></div>
+  if (loading) {
+    return (
+      <div className="referral-page">
+        <div className="referral-loading">{t('referral.loading')}</div>
+      </div>
+    )
+  }
+  if (error) {
+    return (
+      <div className="referral-page">
+        <div className="referral-error">{error}</div>
+      </div>
+    )
+  }
   if (!result) return null
+
+  const isReviewed = result.clinician_review_status === 'reviewed'
+  const isHighRisk = result.is_high_risk
+
+  const handleSaveReview = async (status) => {
+    if (!canReview || !isHighRisk) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      const updated = await patchScanReview(scanId, {
+        status,
+        clinical_notes: notes,
+      })
+      setResult(updated)
+      setNotes(updated.clinical_notes || '')
+    } catch (e) {
+      setSaveError(e.message || 'Could not save')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="referral-page">
       <div className="referral-back">
-        <Link to="/dashboard">← Back to dashboard</Link>
+        <Link to="/dashboard">{t('referral.back')}</Link>
       </div>
-      <h1>Referral: {result.patient_name || result.patient_identifier}</h1>
+      <h1>
+        {t('referral.title')} {result.patient_name || result.patient_identifier}
+      </h1>
+      {isHighRisk && (
+        <div className="review-banner">
+          <span className={`review-status-badge ${isReviewed ? 'reviewed' : 'pending'}`}>
+            {isReviewed ? t('referral.reviewed') : t('referral.pendingReview')}
+          </span>
+          {result.clinician_reviewed_at && (
+            <span className="review-meta">
+              {t('referral.updated')}{' '}
+              {new Date(result.clinician_reviewed_at).toLocaleString(dateLocaleTag)}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="referral-layout">
         <div className="referral-details">
           <section className="detail-card">
-            <h2>Patient</h2>
+            <h2>{t('referral.patient')}</h2>
             <dl>
               {result.patient_name && (
                 <>
-                  <dt>Name</dt>
+                  <dt>{t('referral.name')}</dt>
                   <dd>{result.patient_name}</dd>
                 </>
               )}
               {result.patient_age != null && (
                 <>
-                  <dt>Age</dt>
-                  <dd>{result.patient_age} years</dd>
+                  <dt>{t('referral.age')}</dt>
+                  <dd>
+                    {result.patient_age} {t('referral.years')}
+                  </dd>
                 </>
               )}
-              <dt>Patient ID</dt>
+              <dt>{t('referral.patientId')}</dt>
               <dd>{result.patient_identifier}</dd>
-              <dt>Scan ID</dt>
-              <dd><code>{result.scan_id}</code></dd>
-              <dt>Date</dt>
-              <dd>{result.created_at ? new Date(result.created_at).toLocaleString() : '—'}</dd>
+              <dt>{t('referral.scanId')}</dt>
+              <dd>
+                <code>{result.scan_id}</code>
+              </dd>
+              <dt>{t('referral.date')}</dt>
+              <dd>
+                {result.created_at ? new Date(result.created_at).toLocaleString(dateLocaleTag) : '—'}
+              </dd>
             </dl>
           </section>
           <section className="detail-card">
-            <h2>Results</h2>
+            <h2>{t('referral.results')}</h2>
             <dl>
-              <dt>IMT</dt>
-              <dd><strong>{result.imt_mm} mm</strong></dd>
-              <dt>Risk level</dt>
-              <dd><span className={`risk-badge risk-${(result.risk_level || '').toLowerCase()}`}>{result.risk_level || 'High'}</span></dd>
-              <dt>Plaque detected</dt>
-              <dd>{result.plaque_detected ? 'Yes' : 'No'}</dd>
+              <dt>{t('referral.imt')}</dt>
+              <dd>
+                <strong>{result.imt_mm} mm</strong>
+              </dd>
+              <dt>{t('referral.riskLevel')}</dt>
+              <dd>
+                <span className={`risk-badge risk-${(result.risk_level || '').toLowerCase()}`}>
+                  {result.risk_level || 'High'}
+                </span>
+              </dd>
+              <dt>{t('referral.plaqueDetected')}</dt>
+              <dd>{result.plaque_detected ? t('referral.yes') : t('referral.no')}</dd>
               {result.stenosis_pct != null && (
                 <>
-                  <dt>Stenosis</dt>
+                  <dt>{t('referral.stenosis')}</dt>
                   <dd>{result.stenosis_pct}%</dd>
+                </>
+              )}
+              {result.clinical_notes && !(canReview && isHighRisk) && (
+                <>
+                  <dt>{t('referral.clinicalNotes')}</dt>
+                  <dd className="clinical-notes-display">{result.clinical_notes}</dd>
                 </>
               )}
             </dl>
           </section>
+          {canReview && isHighRisk && (
+            <section className="detail-card review-actions-card">
+              <h2>{t('referral.clinicianReview')}</h2>
+              <p className="review-help">{t('referral.reviewHelp')}</p>
+              <label className="review-notes-label" htmlFor="clinical-notes">
+                {t('referral.notesLabel')}
+              </label>
+              <textarea
+                id="clinical-notes"
+                className="review-notes-input"
+                rows={4}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t('referral.notesPlaceholder')}
+                disabled={saving}
+              />
+              {saveError && <div className="review-save-error">{saveError}</div>}
+              <div className="review-buttons">
+                {!isReviewed ? (
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={saving}
+                    onClick={() => handleSaveReview('reviewed')}
+                  >
+                    {saving ? t('referral.saving') : t('referral.markReviewed')}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={saving}
+                    onClick={() => handleSaveReview('pending')}
+                  >
+                    {saving ? t('referral.saving') : t('referral.reopen')}
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
         </div>
         <div className="referral-image">
           {imageUrl && !imageError ? (
-            <img src={imageUrl} alt="Scan overlay" onError={() => setImageError(true)} />
+            <img src={imageUrl} alt={t('referral.scanAlt')} onError={() => setImageError(true)} />
           ) : result.has_image && imageError ? (
-            <div className="image-placeholder">Image failed to load</div>
+            <div className="image-placeholder">{t('referral.imageFailed')}</div>
           ) : (
-            <div className="image-placeholder">No image available</div>
+            <div className="image-placeholder">{t('referral.noImage')}</div>
           )}
         </div>
       </div>

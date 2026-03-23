@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useSearch } from '../context/SearchContext'
+import { useLocale } from '../context/LocaleContext'
 import { getHighRisk, getScansWithResults } from '../api/client'
 import {
   BarChart,
@@ -12,7 +13,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from 'recharts'
 import './DashboardPage.css'
 
@@ -20,14 +20,20 @@ const RISK_COLORS = { Low: '#22c55e', Moderate: '#f59e0b', High: '#dc2626' }
 
 export default function DashboardPage() {
   const { searchQuery } = useSearch()
+  const { t, dateLocaleTag } = useLocale()
   const [highRisk, setHighRisk] = useState([])
   const [allScans, setAllScans] = useState([])
   const [loading, setLoading] = useState(true)
+  /** @type {['all' | 'pending' | 'reviewed', React.Dispatch<React.SetStateAction<'all' | 'pending' | 'reviewed'>>]} */
+  const [reviewTab, setReviewTab] = useState(
+    /** @type {'all' | 'pending' | 'reviewed'} */ ('pending'),
+  )
 
   useEffect(() => {
     const nameFilter = searchQuery.trim()
+    setLoading(true)
     Promise.all([
-      getHighRisk(100, nameFilter),
+      getHighRisk(100, nameFilter, reviewTab),
       getScansWithResults(200, nameFilter),
     ])
       .then(([hr, scans]) => {
@@ -39,7 +45,7 @@ export default function DashboardPage() {
         setAllScans([])
       })
       .finally(() => setLoading(false))
-  }, [searchQuery])
+  }, [searchQuery, reviewTab])
 
   const filteredHighRisk = useMemo(() => {
     if (!searchQuery.trim()) return highRisk
@@ -49,7 +55,7 @@ export default function DashboardPage() {
         r.patient_name?.toLowerCase().includes(q) ||
         r.patient_identifier?.toLowerCase().includes(q) ||
         r.scan_id?.toLowerCase().includes(q) ||
-        r.patient_id?.toLowerCase().includes(q)
+        r.patient_id?.toLowerCase().includes(q),
     )
   }, [highRisk, searchQuery])
 
@@ -78,24 +84,33 @@ export default function DashboardPage() {
     })
     return Object.values(byDay).map((r) => ({
       ...r,
-      label: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      label: new Date(r.date).toLocaleDateString(dateLocaleTag, { month: 'short', day: 'numeric' }),
     }))
-  }, [allScans])
+  }, [allScans, dateLocaleTag])
+
+  const reviewTabs = useMemo(
+    () => [
+      { id: 'pending', label: t('dashboard.tabPending') },
+      { id: 'reviewed', label: t('dashboard.tabReviewed') },
+      { id: 'all', label: t('dashboard.tabAll') },
+    ],
+    [t],
+  )
 
   if (loading)
     return (
       <div className="dashboard">
-        <div className="dashboard-loading">Loading dashboard…</div>
+        <div className="dashboard-loading">{t('dashboard.loading')}</div>
       </div>
     )
 
   return (
     <div className="dashboard">
-      <h1 className="dashboard-title">Overview</h1>
+      <h1 className="dashboard-title">{t('dashboard.title')}</h1>
 
       <div className="dashboard-charts">
         <div className="chart-card">
-          <h3>Risk distribution</h3>
+          <h3>{t('dashboard.riskDistribution')}</h3>
           <div className="chart-inner">
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
@@ -108,7 +123,7 @@ export default function DashboardPage() {
                   outerRadius={80}
                   label={({ name, value }) => `${name} (${value})`}
                 >
-                  {riskDistribution.map((entry, i) => (
+                  {riskDistribution.map((entry) => (
                     <Cell key={entry.name} fill={RISK_COLORS[entry.name] || '#94a3b8'} />
                   ))}
                 </Pie>
@@ -118,7 +133,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="chart-card">
-          <h3>Scans per day (last 14 days)</h3>
+          <h3>{t('dashboard.scansPerDay')}</h3>
           <div className="chart-inner">
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={scansPerDay}>
@@ -133,9 +148,27 @@ export default function DashboardPage() {
       </div>
 
       <section className="referrals-section">
-        <h2>High-risk referrals</h2>
+        <h2>{t('dashboard.referralsTitle')}</h2>
+        <p className="referrals-section-hint">{t('dashboard.referralsHint')}</p>
+        <div className="review-tabs" role="tablist" aria-label={t('dashboard.referralsTitle')}>
+          {reviewTabs.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={reviewTab === id}
+              className={reviewTab === id ? 'active' : ''}
+              onClick={() => setReviewTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         {filteredHighRisk.length === 0 ? (
-          <div className="empty-state">No high-risk referrals{searchQuery ? ' match your search' : ''}.</div>
+          <div className="empty-state">
+            {t('dashboard.empty')}
+            {searchQuery ? t('dashboard.emptySearch') : ''}.
+          </div>
         ) : (
           <div className="referrals-grid">
             {filteredHighRisk.map((r) => (
@@ -144,22 +177,35 @@ export default function DashboardPage() {
                   <span className="referral-patient">
                     {r.patient_name || r.patient_identifier}
                   </span>
-                  <span className={`risk-badge risk-${(r.risk_level || '').toLowerCase()}`}>
-                    {r.risk_level || 'High'}
+                  <span className="referral-badges">
+                    <span
+                      className={`review-status-badge ${r.clinician_review_status === 'reviewed' ? 'reviewed' : 'pending'}`}
+                    >
+                      {r.clinician_review_status === 'reviewed'
+                        ? t('dashboard.reviewed')
+                        : t('dashboard.pending')}
+                    </span>
+                    <span className={`risk-badge risk-${(r.risk_level || '').toLowerCase()}`}>
+                      {r.risk_level || 'High'}
+                    </span>
                   </span>
                 </div>
                 <div className="referral-meta">
                   {r.patient_name && (
-                    <span className="referral-id">ID: {r.patient_identifier}</span>
+                    <span className="referral-id">
+                      {t('dashboard.id')} {r.patient_identifier}
+                    </span>
                   )}
                   {r.patient_age != null && (
-                    <span className="referral-age">Age: {r.patient_age}</span>
+                    <span className="referral-age">
+                      {t('dashboard.age')} {r.patient_age}
+                    </span>
                   )}
                   IMT: {r.imt_mm} mm
-                  {r.plaque_detected && <span className="plaque">Plaque detected</span>}
+                  {r.plaque_detected && <span className="plaque">{t('dashboard.plaque')}</span>}
                 </div>
                 <div className="referral-date">
-                  {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
+                  {r.created_at ? new Date(r.created_at).toLocaleString(dateLocaleTag) : '—'}
                 </div>
               </Link>
             ))}

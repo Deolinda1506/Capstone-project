@@ -16,9 +16,10 @@ export async function apiRequest(path, options = {}) {
   return res.json()
 }
 
-export async function getHighRisk(limit = 50, name = '') {
+export async function getHighRisk(limit = 50, name = '', reviewStatus = 'all') {
   const params = new URLSearchParams({ limit })
   if (name?.trim()) params.set('name', name.trim())
+  if (reviewStatus && reviewStatus !== 'all') params.set('review_status', reviewStatus)
   return apiRequest(`/scans/high-risk?${params}`)
 }
 
@@ -43,4 +44,14 @@ export async function fetchScanImageBlob(scanId) {
 
 export async function getTeam() {
   return apiRequest('/auth/team')
+}
+
+export async function patchScanReview(scanId, { status, clinical_notes: clinicalNotes }) {
+  return apiRequest(`/scans/${scanId}/review`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      status,
+      clinical_notes: clinicalNotes?.trim() || null,
+    }),
+  })
 }

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import { useLocale } from './context/LocaleContext'
 import AppLayout from './components/AppLayout'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -11,14 +12,16 @@ import ReferralPage from './pages/ReferralPage'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="app-loading">Loading…</div>
+  const { t } = useLocale()
+  if (loading) return <div className="app-loading">{t('app.loading')}</div>
   if (!user) return <Navigate to="/login" replace />
   return children
 }
 
 function PublicOnlyRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="app-loading">Loading…</div>
+  const { t } = useLocale()
+  if (loading) return <div className="app-loading">{t('app.loading')}</div>
   if (user) return <Navigate to="/dashboard" replace />
   return children
 }

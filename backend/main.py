@@ -60,12 +60,112 @@ def _ensure_sqlite_columns():
                 conn.execute(text("ALTER TABLE results ADD COLUMN stenosis_source VARCHAR(32)"))
     except Exception:
         pass
+    try:
+        with engine.connect() as conn:
+            r = conn.execute(text("PRAGMA table_info(scans)"))
+            scan_cols = {row[1] for row in r}
+        if "clinician_review_status" not in scan_cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        "ALTER TABLE scans ADD COLUMN clinician_review_status VARCHAR(20) DEFAULT 'pending'"
+                    )
+                )
+        if "clinician_reviewed_at" not in scan_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE scans ADD COLUMN clinician_reviewed_at DATETIME"))
+        if "clinician_reviewed_by_id" not in scan_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE scans ADD COLUMN clinician_reviewed_by_id VARCHAR(36)"))
+        if "clinical_notes" not in scan_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE scans ADD COLUMN clinical_notes TEXT"))
+    except Exception:
+        pass
+
+
+def _ensure_postgres_schema():
+    """
+    Add missing columns on PostgreSQL (e.g. Render) when the DB predates model changes.
+    SQLite uses _ensure_sqlite_columns instead.
+    """
+    from sqlalchemy import text
+    from backend.database import engine
+
+    if "postgresql" not in str(engine.url).lower():
+        return
+    try:
+        with engine.begin() as conn:
+            r = conn.execute(
+                text(
+                    "SELECT EXISTS (SELECT FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name = 'hospitals')"
+                )
+            )
+            if r.scalar():
+                r2 = conn.execute(
+                    text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'hospitals'"
+                    )
+                )
+                hcols = {row[0] for row in r2}
+                for col, ddl in (
+                    ("address", "VARCHAR(512)"),
+                    ("province", "VARCHAR(128)"),
+                    ("district", "VARCHAR(128)"),
+                    ("sector", "VARCHAR(128)"),
+                    ("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+                    ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+                ):
+                    if col not in hcols:
+                        conn.execute(text(f"ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS {col} {ddl}"))
+
+            r = conn.execute(
+                text(
+                    "SELECT EXISTS (SELECT FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name = 'users')"
+                )
+            )
+            if not r.scalar():
+                return
+            r2 = conn.execute(
+                text(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = 'public' AND table_name = 'users'"
+                )
+            )
+            ucols = {row[0] for row in r2}
+            for col, ddl in (
+                ("firebase_uid", "VARCHAR(128)"),
+                ("password_hash", "VARCHAR(255)"),
+                ("display_name", "VARCHAR(255)"),
+                ("role", "VARCHAR(50) DEFAULT 'chw'"),
+                ("staff_id", "VARCHAR(128)"),
+                ("phone", "VARCHAR(20)"),
+                ("facility", "VARCHAR(255)"),
+                ("hospital_id", "VARCHAR(36)"),
+                ("status", "VARCHAR(20) DEFAULT 'approved'"),
+                ("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+                ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+                ("deleted_at", "TIMESTAMP"),
+                ("is_deleted", "BOOLEAN DEFAULT FALSE"),
+                ("password_reset_token", "VARCHAR(255)"),
+                ("password_reset_expires", "TIMESTAMP"),
+            ):
+                if col not in ucols:
+                    conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {ddl}"))
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception("Postgres schema ensure failed (non-fatal)")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create DB tables on startup (use Alembic in prod for migrations)."""
     Base.metadata.create_all(bind=engine)
+    _ensure_postgres_schema()
     _ensure_sqlite_columns()
     # Preload ML model so first /scans/upload is faster (avoids Swagger timeout)
     try:

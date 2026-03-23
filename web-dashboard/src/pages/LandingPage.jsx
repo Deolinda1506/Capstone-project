@@ -1,62 +1,73 @@
 import { Link } from 'react-router-dom'
+import { useLocale } from '../context/LocaleContext'
 import './LandingPage.css'
 
 export default function LandingPage() {
+  const { t } = useLocale()
+
   return (
     <div className="landing">
       <header className="landing-header">
         <div className="landing-nav">
-          <span className="landing-logo">CarotidCheck</span>
+          <span className="landing-logo">{t('landing.logo')}</span>
           <div className="landing-nav-links">
-            <Link to="/login">Log in</Link>
-            <Link to="/register-organization" className="btn btn-primary">Register organization</Link>
+            <Link to="/login">{t('landing.login')}</Link>
+            <Link to="/register-organization" className="btn btn-primary">
+              {t('landing.registerOrg')}
+            </Link>
           </div>
         </div>
       </header>
 
       <section className="hero">
-        <h1>AI-powered carotid ultrasound screening</h1>
-        <p className="hero-sub">
-          Stroke risk assessment for Rwanda. Community health workers capture scans, get instant IMT and risk levels, and refer high-risk patients to hospitals.
-        </p>
+        <h1>{t('landing.heroTitle')}</h1>
+        <p className="hero-sub">{t('landing.heroSub')}</p>
         <div className="hero-cta">
-          <Link to="/register-organization" className="btn btn-primary btn-lg">Get started</Link>
-          <Link to="/login" className="btn btn-outline btn-lg">Log in</Link>
+          <Link to="/register-organization" className="btn btn-primary btn-lg">
+            {t('landing.getStarted')}
+          </Link>
+          <Link to="/login" className="btn btn-outline btn-lg">
+            {t('landing.login')}
+          </Link>
         </div>
       </section>
 
       <section className="features">
-        <h2>Features</h2>
+        <h2>{t('landing.featuresTitle')}</h2>
         <div className="features-grid">
           <div className="feature-card">
             <div className="feature-icon">📊</div>
-            <h3>Instant risk stratification</h3>
-            <p>IMT (intima-media thickness) and risk levels from carotid ultrasound in seconds.</p>
+            <h3>{t('landing.f1Title')}</h3>
+            <p>{t('landing.f1Body')}</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">🏥</div>
-            <h3>Referral workflow</h3>
-            <p>High-risk patients are flagged and referred seamlessly to district hospitals.</p>
+            <h3>{t('landing.f2Title')}</h3>
+            <p>{t('landing.f2Body')}</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">📱</div>
-            <h3>Clinician dashboard</h3>
-            <p>View high-risk referrals, analytics, and team management in one place.</p>
+            <h3>{t('landing.f3Title')}</h3>
+            <p>{t('landing.f3Body')}</p>
           </div>
         </div>
       </section>
 
       <section className="cta">
-        <h2>Ready to get started?</h2>
-        <p>Register your organization or log in to the clinician dashboard.</p>
+        <h2>{t('landing.ctaTitle')}</h2>
+        <p>{t('landing.ctaSub')}</p>
         <div className="cta-buttons">
-          <Link to="/register-organization" className="btn btn-primary btn-lg">Register organization</Link>
-          <Link to="/login" className="btn btn-outline btn-lg">Log in</Link>
+          <Link to="/register-organization" className="btn btn-primary btn-lg">
+            {t('landing.registerOrg')}
+          </Link>
+          <Link to="/login" className="btn btn-outline btn-lg">
+            {t('landing.login')}
+          </Link>
         </div>
       </section>
 
       <footer className="landing-footer">
-        <p>© CarotidCheck — Stroke risk assessment for Rwanda</p>
+        <p>{t('landing.footer')}</p>
       </footer>
     </div>
   )

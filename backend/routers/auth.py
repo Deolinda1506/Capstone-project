@@ -6,6 +6,7 @@ from uuid import uuid4
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
@@ -194,12 +195,6 @@ def register_hospital(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Valid admin email is required",
         )
-    existing_user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists",
-        )
     hospital_id = str(uuid4())
     hospital = Hospital(
         id=hospital_id,
@@ -208,23 +203,49 @@ def register_hospital(
         district=body.district,
         sector=body.sector,
     )
-    db.add(hospital)
+    try:
+        existing_user = db.query(User).filter(User.email == email, User.is_deleted == False).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An account with this email already exists",
+            )
+        db.add(hospital)
 
-    admin_id = str(uuid4())
-    admin = User(
-        id=admin_id,
-        email=email,
-        password_hash=pwd_context.hash(_truncate_for_bcrypt(body.password)),
-        display_name=body.display_name or email.split("@")[0],
-        role="admin",
-        staff_id=f"admin-{hospital_id[:8]}",
-        hospital_id=hospital_id,
-        facility=body.hospital_name,
-        status="approved",
-    )
-    db.add(admin)
-    db.commit()
-    db.refresh(admin)
+        admin_id = str(uuid4())
+        admin = User(
+            id=admin_id,
+            email=email,
+            password_hash=pwd_context.hash(_truncate_for_bcrypt(body.password)),
+            display_name=body.display_name or email.split("@")[0],
+            role="admin",
+            staff_id=f"admin-{hospital_id[:8]}",
+            hospital_id=hospital_id,
+            facility=body.hospital_name,
+            status="approved",
+        )
+        db.add(admin)
+        db.commit()
+        db.refresh(admin)
+    except HTTPException:
+        db.rollback()
+        raise
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account or organization with this data already exists",
+        ) from None
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Database error during registration. "
+                "Redeploy the API so Postgres migrations run on startup, or run ALTER TABLE to add missing columns. "
+                f"({type(e).__name__})"
+            ),
+        ) from None
 
     token = create_access_token(subject=admin.id)
     return TokenResponse(access_token=token, user=_user_response(admin, db))
