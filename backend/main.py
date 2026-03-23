@@ -1,9 +1,13 @@
 """FastAPI app: SQLAlchemy · Pydantic v2 · JWT · Attention U-Net. SQLite (dev) / PostgreSQL (prod)."""
+import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.requests import Request
 
 from backend.database import engine, Base
 import backend.models  # noqa: F401 — register models
@@ -247,6 +251,37 @@ app.include_router(auth.router)
 app.include_router(patients.router)
 app.include_router(scans.router)
 
+_log = logging.getLogger(__name__)
+
+
+@app.exception_handler(ResponseValidationError)
+async def _response_validation_handler(request: Request, exc: ResponseValidationError):
+    """Return JSON instead of a plain-text 500 when response_model validation fails."""
+    try:
+        errs = list(exc.errors())
+    except Exception:
+        errs = []
+    _log.warning("Response validation failed on %s %s: %s", request.method, request.url.path, errs)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Response validation failed", "errors": errs},
+    )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Return JSON for unexpected errors (e.g. SQLAlchemy) instead of Starlette's plain 'Internal Server Error'.
+    Set EXPOSE_INTERNAL_ERRORS=0 to hide exception text in production.
+    """
+    expose = os.getenv("EXPOSE_INTERNAL_ERRORS", "1").strip().lower() in ("1", "true", "yes")
+    if expose:
+        detail = f"{type(exc).__name__}: {str(exc)[:500]}"
+    else:
+        detail = "Internal server error"
+    _log.exception("Unhandled exception on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": detail})
+
 
 @app.get("/")
 def root():
@@ -284,6 +319,22 @@ def health_db():
                     )
                 )
                 out["users_table_exists"] = bool(r2.scalar())
+                r3 = conn.execute(
+                    text(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'users' "
+                        "ORDER BY ordinal_position"
+                    )
+                )
+                out["users_columns"] = [row[0] for row in r3.fetchall()]
+                r4 = conn.execute(
+                    text(
+                        "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'users' "
+                        "AND column_name = 'is_deleted')"
+                    )
+                )
+                out["users_has_is_deleted_column"] = bool(r4.scalar())
             return out
     except Exception as e:
         return JSONResponse(
