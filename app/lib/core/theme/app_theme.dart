@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// CarotidCheck theme - professional medical app
-/// Color palette: medical blues + health greens
+/// CarotidCheck theme — Figma primary **#1F41BB** for buttons, app bars, links, logo.
 class AppTheme {
   AppTheme._();
 
@@ -12,11 +11,13 @@ class AppTheme {
   static const double spacingLg = 24;
   static const double spacingXl = 32;
 
-  // #1F41BB from Figma
+  /// Brand primary (Figma).
   static const Color primaryBlue = Color(0xFF1F41BB);
-  static const Color primaryBlueLight = Color(0xFF4A6FD4);
+  /// Lighter same-hue blue for gradients / highlights (pairs with [primaryBlue]).
+  static const Color primaryBlueLight = Color(0xFF4D64D9);
   static const Color accentTeal = Color(0xFF00695C);
-  static const Color softBlue = Color(0xFF1976D2);
+  /// Secondary UI blue — tinted from [primaryBlue], not Material default blue.
+  static const Color softBlue = Color(0xFF3553C5);
   static const Color riskHigh = Color(0xFFD32F2F);
   static const Color riskModerate = Color(0xFFF57C00);
   static const Color riskLow = Color(0xFF2E7D32);
@@ -26,14 +27,20 @@ class AppTheme {
   static const Color syncSynced = Color(0xFF2E7D32);
 
   static ThemeData get lightTheme {
+    final baseScheme = ColorScheme.fromSeed(
+      seedColor: primaryBlue,
+      brightness: Brightness.light,
+    );
+    final colorScheme = baseScheme.copyWith(
+      primary: primaryBlue,
+      onPrimary: Colors.white,
+      secondary: accentTeal,
+      onSecondary: Colors.white,
+    );
+
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryBlue,
-        primary: primaryBlue,
-        secondary: accentTeal,
-        brightness: Brightness.light,
-      ),
+      colorScheme: colorScheme,
       scaffoldBackgroundColor: const Color(0xFFF5F7FA),
       appBarTheme: AppBarTheme(
         backgroundColor: primaryBlue,
@@ -46,6 +53,9 @@ class AppTheme {
         ),
       ),
       textTheme: GoogleFonts.dmSansTextTheme(),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: primaryBlue),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,
@@ -66,12 +76,22 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: primaryBlue,
+          side: const BorderSide(color: primaryBlue),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: primaryBlue, width: 2),
+        ),
+        floatingLabelStyle: WidgetStateTextStyle.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.focused) ? primaryBlue : colorScheme.onSurfaceVariant,
+          ),
+        ),
         filled: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
@@ -86,10 +106,13 @@ class AppTheme {
   static ThemeData get darkTheme {
     final darkScheme = ColorScheme.fromSeed(
       seedColor: primaryBlue,
-      primary: primaryBlue,
-      secondary: accentTeal,
       brightness: Brightness.dark,
       surface: const Color(0xFF121212),
+    ).copyWith(
+      primary: primaryBlue,
+      onPrimary: Colors.white,
+      secondary: accentTeal,
+      onSecondary: Colors.white,
     );
     return ThemeData(
       useMaterial3: true,
@@ -106,6 +129,9 @@ class AppTheme {
         ),
       ),
       textTheme: GoogleFonts.dmSansTextTheme(ThemeData.dark().textTheme),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: primaryBlueLight),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryBlue,

@@ -20,7 +20,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _approvalCodeController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   bool _obscurePassword = true;
@@ -30,7 +29,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _nameController.dispose();
     _passwordController.dispose();
-    _approvalCodeController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
     super.dispose();
@@ -51,14 +49,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final authService = context.read<AuthService>();
-    final approvalCode = _approvalCodeController.text.trim();
     final phone = _phoneController.text.trim();
     final email = _emailController.text.trim();
     final result = await authService.registerWithId(
       _passwordController.text,
       _nameController.text.trim(),
       districtId: _selectedDistrict!.idCode,
-      approvalCode: approvalCode.isEmpty ? null : approvalCode,
       phone: phone.isEmpty ? null : phone,
       email: email.isEmpty ? null : email,
     );
@@ -183,21 +179,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }).toList(),
                       onChanged: (v) => setState(() => _selectedDistrict = v),
                       validator: (v) => v == null ? l10n.t('required') : null,
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                Builder(
-                  builder: (context) {
-                    final l10n = context.l10n;
-                    return TextFormField(
-                      controller: _approvalCodeController,
-                      decoration: InputDecoration(
-                        labelText: l10n.t('approvalCode'),
-                        hintText: l10n.t('approvalCodeHint'),
-                        prefixIcon: const Icon(Icons.vpn_key_outlined),
-                        helperText: l10n.t('approvalCodeHelper'),
-                      ),
                     );
                   },
                 ),

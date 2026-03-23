@@ -10,7 +10,7 @@ The development of StrokeLink follows the Agile Development Model. This approach
 
 - **Phase 1: Sprint One (Data & Preprocessing)** — The first phase involves gathering the Momot (2022) dataset and applying Wavelet Transforms to ensure the images are clean enough for the AI to read.
 
-- **Phase 2: Sprint Two (AI Model Development)** — In this stage, the Swin-UNETR Vision Transformer is trained. The goal is to reach a high accuracy level in identifying the carotid artery walls.
+- **Phase 2: Sprint Two (AI Model Development)** — In this stage, Vision Transformer (ViT) and Attention U-Net models are trained and compared on the Momot (2022) data. The best-performing architecture (by Dice, IoU, and related metrics) is chosen for integration. The goal is high accuracy in identifying the carotid artery walls.
 
 - **Phase 3: Sprint Three (System Integration)** — The trained model is connected to the FastAPI backend, and the Flutter interface is built so health workers can interact with the system.
 
@@ -38,10 +38,10 @@ The ERD for StrokeLink defines the logical structure of the database. It is desi
 
 | Tool | Purpose |
 |------|---------|
-| **Integrated Development Environment (IDE)** | VS Code & Google Colab serves as the primary hub for building the Flutter app and FastAPI backend. Google Colab is used specifically for the ML Track requirements, providing the GPU power needed to train the Swin-UNETR model on the Momot (2022) dataset. |
+| **Integrated Development Environment (IDE)** | VS Code & Google Colab serves as the primary hub for building the Flutter app and FastAPI backend. Google Colab is used specifically for the ML track, providing the GPU power needed to train and compare ViT and Attention U-Net on the Momot (2022) dataset. |
 | **Mobile Framework** | Flutter (Dart) — Chosen for its "Thin Client" efficiency. Since the app is online-only, Flutter handles the UI and the secure transmission of carotid images to the cloud without needing heavy local processing. |
 | **Backend Framework** | FastAPI (Python) — A high-performance web framework used to create the StrokeLink API. Its asynchronous capabilities allow it to receive an ultrasound image, send it to the AI model, and save results to the database simultaneously, reducing the triage time. |
-| **Medical AI Library** | MONAI (Medical Open Network for AI) — Instead of using a generic AI library, MONAI is used because it is specifically optimized for healthcare. It provides the pre-built Swin-UNETR architecture, which is essential for accurate carotid artery segmentation. |
+| **ML framework** | TensorFlow / Keras — Used to implement, train, and compare the ViT and Attention U-Net segmentation models, and to load the selected model for server-side inference (with custom layers as required for Attention U-Net). |
 | **Cloud Hosting** | Render (Free Tier) |
 | **Database & Auth** | Firebase — A managed cloud database used for real-time synchronization. When a caregiver in Bumbogo saves a patient's medical history, it is instantly visible to doctors at the Gasabo District Hospital. |
 | **Design & Prototyping** | Figma — Used in the initial phase to design the StrokeLink user interface, ensuring the app is easy to navigate for health workers who may not be tech-savvy. |

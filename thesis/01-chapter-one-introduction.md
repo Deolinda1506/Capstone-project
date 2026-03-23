@@ -26,7 +26,7 @@ The core issue is not just a lack of awareness, but a "blind spot" in technology
 
 ## 1.3 Project's Main Objective
 
-The overall aim of this project is to develop StrokeLink, a cloud-integrated software solution that utilizes a hybrid Swin-UNETR architecture (combining Vision Transformers and U-Net) along with a specialized image-processing pipeline incorporating CLAHE and Wavelet Transforms. This system aims to automate the measurement of carotid Intima-Media Thickness (IMT) to provide objective community-level screening, thereby bridging the 72-hour "Treatment Vacuum" and enabling high-risk individuals in Rwanda to enter the life-saving 4.5-hour "Golden Hour" window.
+The overall aim of this project is to develop StrokeLink, a cloud-integrated software solution that compares Vision Transformer (ViT) and Attention U-Net architectures for carotid artery segmentation, selects the best-performing model for deployment, and pairs it with a specialized image-processing pipeline incorporating CLAHE and Wavelet Transforms. This system aims to automate the measurement of carotid Intima-Media Thickness (IMT) to provide objective community-level screening, thereby bridging the 72-hour "Treatment Vacuum" and enabling high-risk individuals in Rwanda to enter the life-saving 4.5-hour "Golden Hour" window.
 
 ### 1.3.1 List of the Specific Objectives
 
@@ -36,7 +36,7 @@ The overall aim of this project is to develop StrokeLink, a cloud-integrated sof
 2. **To develop the StrokeLink cloud-integrated solution:**
    Design and implement a multi-stage software architecture consisting of:
    - An Image-Processing Engine that applies CLAHE (Contrast Limited Adaptive Histogram Equalization) for contrast enhancement and Discrete Wavelet Transforms (DWT) for noise reduction.
-   - A FastAPI Backend hosting a Swin-UNETR model to perform high-precision automated carotid artery segmentation.
+   - A FastAPI Backend hosting the selected segmentation model (after comparative evaluation of ViT and Attention U-Net) to perform high-precision automated carotid artery segmentation.
    - A Mobile Interface for Community Health Workers (CHWs) to upload scans and receive real-time, cloud-synchronized risk stratification and referral alerts.
 
 3. **To verify and validate results based on measurable metrics:**
@@ -46,7 +46,7 @@ The overall aim of this project is to develop StrokeLink, a cloud-integrated sof
 
 To guide the development of StrokeLink and see how well it works in Rwanda, this research will answer these three questions:
 
-1. How can we make the Swin-UNETR AI model work with CLAHE and DWT (image cleaning tools) to measure the artery wall very accurately, even when ultrasound photos are taken in poor lighting in rural Rwandan villages?
+1. How can we compare Vision Transformer (ViT) and Attention U-Net models, together with CLAHE and DWT (image cleaning tools), to measure the artery wall very accurately, even when ultrasound photos are taken in poor lighting in rural Rwandan villages?
 
 2. Does using a cloud-based system to measure Carotid IMT (artery thickness) give a better warning for stroke than the simple "FAST" checklist (looking for face drooping or slurred speech) that community workers in Rwanda currently use?
 
@@ -58,13 +58,13 @@ The pilot phase will be conducted within the Gasabo District of Kigali, specific
 
 Testing will involve a controlled group of 30 to 50 participants aged 40 and above, representing the primary high-risk demographic for stroke in Rwanda. The software will be operated by 5 Community Health Workers (CHWs) or health post staff, with results monitored via an online dashboard by 2 to 3 clinicians in Kigali to verify the referral process. This focused human-centric scope ensures that the 3-month implementation phase remains realistic and manageable.
 
-Technically, the project focuses on automated Intima-Media Thickness (IMT) measurement using carotid ultrasound images. To ensure scientific validity without requiring expensive medical hardware, testing will be done using the Momot (2022) dataset and simulated mobile input, where ultrasound images are processed as if captured by a live probe. The backend will use a Swin-UNETR architecture supported by CLAHE and DWT for image cleaning, focusing strictly on diagnostic accuracy and real-time referral alerts rather than full-scale hospital management systems.
+Technically, the project focuses on automated Intima-Media Thickness (IMT) measurement using carotid ultrasound images. To ensure scientific validity without requiring expensive medical hardware, testing will be done using the Momot (2022) dataset and simulated mobile input, where ultrasound images are processed as if captured by a live probe. The backend compares ViT and Attention U-Net for segmentation, deploys the stronger model for inference, and uses CLAHE and DWT for image cleaning, focusing strictly on diagnostic accuracy and real-time referral alerts rather than full-scale hospital management systems.
 
 ## 1.6 Significance and Justification
 
 The successful implementation of StrokeLink will fundamentally transform stroke triage in Rwanda by replacing subjective, manual checklists with objective, AI-driven biomarkers. By automating Carotid IMT measurement, the software provides community health posts in peri-urban areas like Bumbogo with diagnostic capabilities previously reserved for specialized Kigali hospitals. This effectively democratizes high-level neurological screening, ensuring that a patient's location does not determine their access to life-saving diagnostics.
 
-Technically, this project demonstrates that advanced Swin-UNETR Vision Transformer architectures can function reliably over limited digital infrastructure. By utilizing CLAHE and Discrete Wavelet Transforms (DWT) to mitigate the issue of low-quality ultrasound images, the study justifies a "Cloud-First" approach to medical technology. It proves that high-performance AI can be delivered to low-resource settings without the need for expensive, localized hardware, offering a scalable blueprint for digital health interventions across Sub-Saharan Africa.
+Technically, this project demonstrates that Vision Transformer and Attention U-Net architectures can function reliably over limited digital infrastructure when appropriately compared and selected. By utilizing CLAHE and Discrete Wavelet Transforms (DWT) to mitigate the issue of low-quality ultrasound images, the study justifies a "Cloud-First" approach to medical technology. It proves that high-performance AI can be delivered to low-resource settings without the need for expensive, localized hardware, offering a scalable blueprint for digital health interventions across Sub-Saharan Africa.
 
 Ultimately, this software directly addresses the catastrophic 72-hour delay in stroke care by establishing a real-time digital referral bridge. By synchronizing diagnostic data between community health workers and urban specialists, StrokeLink facilitates patient entry into the critical 4.5-hour "Golden Hour." This shift is expected to significantly reduce long-term disability and mortality rates, positioning Rwanda as a leader in AI-driven clinical triage for non-communicable diseases.
 
@@ -72,7 +72,7 @@ Ultimately, this software directly addresses the catastrophic 72-hour delay in s
 
 | Item / Service | Description | Estimated Cost (USD) |
 |----------------|-------------|----------------------|
-| Cloud Hosting (FastAPI) | Hosting the backend and Swin-UNETR model using the Render Free Tier with an optimized "Lite" model. | $0 (Free Tier) |
+| Cloud Hosting (FastAPI) | Hosting the backend and deployed segmentation model (TensorFlow/Keras, ViT vs. Attention U-Net pipeline) using the Render Free Tier with an optimized "Lite" stack where applicable. | $0 (Free Tier) |
 | Mobile App Backend | Development and deployment of the FastAPI interface to manage mobile requests. | $0 (Open Source) |
 | Cloud Database | Managed database service (e.g., Supabase or Firebase) for real-time patient data synchronization. | $0 (Free Tier) |
 | SMS/Notification Gateway | Integration of Africa's Talking API for automated emergency alerts to clinicians in Kigali. | $25 |

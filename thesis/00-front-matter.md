@@ -42,14 +42,11 @@
 | JSON | JavaScript Object Notation |
 | MAE | Mean Absolute Error |
 | ML | Machine Learning |
-| MONAI | Medical Open Network for Artificial Intelligence |
 | POCUS | Point-of-Care Ultrasound |
 | RBC | Rwanda Biomedical Centre |
 | REST | Representational State Transfer |
 | ROI | Region of Interest |
 | SLR | Systematic Literature Review |
-| SW-MSA | Shifted Window-based Multi-head Self-Attention |
-| Swin-UNETR | Swin Transformer-based UNet |
 | UML | Unified Modeling Language |
 | ViT | Vision Transformer |
 | WHO | World Health Organization |
