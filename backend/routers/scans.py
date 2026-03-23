@@ -11,7 +11,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -216,6 +216,38 @@ async def upload_scan_image(
         pixel_spacing_mm=pred.get("pixel_spacing_mm"),
         pixel_spacing_source=pred.get("pixel_spacing_source"),
     )
+
+
+@router.get("/risk-distribution")
+def risk_distribution_summary(
+    db: Annotated[Session, Depends(get_db)] = ...,
+    current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
+):
+    """
+    Count analyses (results) by risk_level for non-deleted scans.
+    CHWs see only their patients' scans; clinicians and admins see all.
+    Use for Chapter 5 risk bar charts and dashboards.
+    """
+    q = (
+        db.query(Result.risk_level, func.count(Result.id))
+        .join(Scan, Scan.id == Result.scan_id)
+        .filter(Scan.is_deleted == False)
+    )
+    role = (current_user.role or "chw").lower()
+    if role == "chw":
+        q = q.join(Patient, Patient.id == Scan.patient_id).filter(Patient.user_id == current_user.id)
+    rows = q.group_by(Result.risk_level).all()
+    by_level: dict[str, int] = {"Low": 0, "Moderate": 0, "High": 0}
+    for level, n in rows:
+        k = (level or "").strip()
+        if k in by_level:
+            by_level[k] = int(n)
+    total = sum(by_level.values())
+    return {
+        "total": total,
+        "by_risk_level": by_level,
+        "scope": "chw_patients" if role == "chw" else "all_patients",
+    }
 
 
 @router.get("/with-results")

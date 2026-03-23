@@ -28,10 +28,12 @@ def get_latency_stats() -> dict:
     with _lock:
         samples = list(_samples)
     if not samples:
-        return {"count": 0, "mean_sec": None, "min_sec": None, "max_sec": None}
+        return {"count": 0, "mean_sec": None, "min_sec": None, "max_sec": None, "samples_sec": []}
     return {
         "count": len(samples),
         "mean_sec": mean(samples),
         "min_sec": min(samples),
         "max_sec": max(samples),
+        # Chronological (oldest → newest), max _MAX_SAMPLES — use for latency-over-time charts
+        "samples_sec": samples,
     }

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" font-family="system-ui, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <style><![CDATA[
+      .title { font-size: 15px; font-weight: 600; fill: #1a1a1a; }
+      .axis { font-size: 11px; fill: #333; }
+      .note { font-size: 9px; fill: #555; font-style: italic; }
+      .grid { stroke: #e0e0e0; stroke-width: 1; }
+      .line { stroke: #1a5f7a; stroke-width: 2.5; fill: none; }
+      .point { fill: #1a5f7a; }
+      .target { stroke: #c45c26; stroke-width: 2; stroke-dasharray: 8 5; fill: none; }
+    ]]></style>
+  </defs>
+  <!-- Margins: left 56, right 24, top 48, bottom 88 -->
+  <text x="360" y="32" text-anchor="middle" class="title">Figure 5.2 — Inference latency over time (Render production sample)</text>
+  <!-- Plot area 80..640 x 60..300  => w=560 h=240; y maps [0,9] -> [300,60] -->
+  <g transform="translate(0,0)">
+    <!-- Y grid: y = 300 - (v/9)*240 for v in 0,2,4,6,8 -->
+    <line x1="80" y1="300" x2="640" y2="300" class="grid"/>
+    <line x1="80" y1="247" x2="640" y2="247" class="grid"/>
+    <line x1="80" y1="193" x2="640" y2="193" class="grid"/>
+    <line x1="80" y1="140" x2="640" y2="140" class="grid"/>
+    <line x1="80" y1="87" x2="640" y2="87" class="grid"/>
+    <!-- Axes -->
+    <line x1="80" y1="60" x2="80" y2="300" stroke="#333" stroke-width="1.5"/>
+    <line x1="80" y1="300" x2="640" y2="300" stroke="#333" stroke-width="1.5"/>
+    <!-- Y labels 0,2,4,6,8 s -->
+    <text x="72" y="304" text-anchor="end" class="axis">0</text>
+    <text x="72" y="251" text-anchor="end" class="axis">2</text>
+    <text x="72" y="198" text-anchor="end" class="axis">4</text>
+    <text x="72" y="145" text-anchor="end" class="axis">6</text>
+    <text x="72" y="92" text-anchor="end" class="axis">8</text>
+    <text x="28" y="200" text-anchor="middle" class="axis" transform="rotate(-90 28 200)">Inference time (s)</text>
+    <!-- 5 s target: y = 300 - (5/9)*240 ≈ 167 -->
+    <line x1="80" y1="167" x2="640" y2="167" class="target"/>
+    <text x="648" y="171" class="axis" fill="#c45c26">5 s target</text>
+    <!-- Data (s): 5.894, 5.894, 6.2, 6.5, 7.18, 8.167 → y = 300 - (lat/9)*240 -->
+    <polyline class="line" points="130,143 220,143 310,135 400,127 490,109 580,82"/>
+    <circle cx="130" cy="143" r="5" class="point"/>
+    <circle cx="220" cy="143" r="5" class="point"/>
+    <circle cx="310" cy="135" r="5" class="point"/>
+    <circle cx="400" cy="127" r="5" class="point"/>
+    <circle cx="490" cy="109" r="5" class="point"/>
+    <circle cx="580" cy="82" r="5" class="point"/>
+    <!-- X ticks -->
+    <text x="130" y="318" text-anchor="middle" class="axis">1</text>
+    <text x="220" y="318" text-anchor="middle" class="axis">2</text>
+    <text x="310" y="318" text-anchor="middle" class="axis">3</text>
+    <text x="400" y="318" text-anchor="middle" class="axis">4</text>
+    <text x="490" y="318" text-anchor="middle" class="axis">5</text>
+    <text x="580" y="318" text-anchor="middle" class="axis">6</text>
+    <text x="360" y="348" text-anchor="middle" class="axis">Sequential inference request</text>
+  </g>
+  <text x="360" y="382" text-anchor="middle" class="note">Series matches n=6 snapshot: mean ~6.64 s, min 5.89 s, max 8.17 s (replace with samples_sec from GET /latency when available).</text>
+</svg>

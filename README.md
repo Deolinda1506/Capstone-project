@@ -2,7 +2,7 @@
 
 AI-powered carotid ultrasound screening for stroke risk assessment in Rwanda. Community health workers capture scans, get instant IMT (intima-media thickness) and risk levels, and refer high-risk patients to hospitals.
 
-**Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com](https://carotidcheck-dashboard.onrender.com) (see `render.yaml`) · **Demo video:** [5-min demo](https://drive.google.com/file/d/1cF0XLiqFo-9NMABwXhOqR2R74O_6UWwN/view?usp=sharing)
+**Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · [Latency stats](https://carotidcheck-api.onrender.com/latency) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com](https://carotidcheck-dashboard.onrender.com) (see `render.yaml`) · **Demo video:** [5-min demo](https://drive.google.com/file/d/1cF0XLiqFo-9NMABwXhOqR2R74O_6UWwN/view?usp=sharing)
 
 ---
 
@@ -157,12 +157,13 @@ CarotidCheck app/
 | `/patients` | POST | `identifier`, `email`, `facility` | `Patient` (id, identifier, user_id, created_at) |
 | `/patients` | GET | `limit` (query) | `[Patient]` |
 | `/scans/upload` | POST | `patient_id` (form), `file` (image) | `scan`, `result` (imt_mm, risk_level, is_high_risk), `segmentation_overlay_base64`, `plaque_detected`, `stenosis_pct`, `inference_time_sec` |
+| `/scans/risk-distribution` | GET | — | `{ total, by_risk_level: { Low, Moderate, High }, scope }` — counts from stored analyses (CHW: own patients only; clinician/admin: all) |
 | `/scans/with-results` | GET | `limit` (query) | `[{ scan_id, patient_id, patient_identifier, created_at, imt_mm, risk_level, is_high_risk, plaque_detected, has_image }]` |
 | `/scans/high-risk` | GET | `limit` (query) | `[{ scan_id, patient_id, patient_identifier, created_at, imt_mm, risk_level, is_high_risk, plaque_detected, has_image }]` |
 | `/scans/{scan_id}/image` | GET | — | PNG image (binary) |
 | `/health` | GET | — | `{ "status": "ok" }` |
 | `/ml-status` | GET | — | `{ "ml_ready", "overlay_available", "error" }` |
-| `/latency` | GET | — | `{ "count", "mean_sec", "min_sec", "max_sec" }` |
+| `/latency` | GET | — | `{ "count", "mean_sec", "min_sec", "max_sec", "samples_sec" }` (last ≤100 inference times, oldest first) |
 
 **Auth:** All protected endpoints except `/auth/*`, `/health` require `Authorization: Bearer <token>`.
 
@@ -215,6 +216,10 @@ This section maps the functional requirements (use cases) from the system design
 ---
 
 ## Analysis
+
+**Figure 5.3 (thesis) from your database:** after scans exist in SQLite/Postgres, run  
+`PYTHONPATH=. python3 scripts/render_figure_5_3_from_db.py`  
+(requires `sqlalchemy`, `python-dotenv`; uses `DATABASE_URL` or `data/carotidcheck.db`). Refreshes `thesis/figures/figure-5.3-risk-distribution.svg` and `.png` (macOS `qlmanage`). See also `GET /scans/risk-distribution`.
 
 **Mapping implementation (CarotidCheck/StrokeLink) to proposal objectives:**
 
