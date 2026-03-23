@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import { useLocale } from '../context/LocaleContext'
+import { useAuth } from '../context/AuthContext'
 import { SUPPORTED_LOCALES } from '../i18n/translations'
 import './SettingsPage.css'
 
@@ -9,6 +10,8 @@ const DESKTOP_NOTIFY_KEY = 'cc_desktop_notify'
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
   const { t, locale, setLocale } = useLocale()
+  const { user, refreshUser } = useAuth()
+  const [profileLoading, setProfileLoading] = useState(true)
   const [desktopNotify, setDesktopNotify] = useState(() => {
     try {
       return localStorage.getItem(DESKTOP_NOTIFY_KEY) === '1'
@@ -25,6 +28,18 @@ export default function SettingsPage() {
       /* ignore */
     }
   }, [desktopNotify])
+
+  useEffect(() => {
+    let cancelled = false
+    setProfileLoading(true)
+    refreshUser()
+      .finally(() => {
+        if (!cancelled) setProfileLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [refreshUser])
 
   const requestNotifyPermission = async () => {
     if (typeof Notification === 'undefined') return false
@@ -51,6 +66,63 @@ export default function SettingsPage() {
   return (
     <div className="settings-page">
       <h1>{t('settings.title')}</h1>
+
+      <section className="settings-section settings-profile">
+        <h2>{t('settings.profileTitle')}</h2>
+        <p className="settings-hint">{t('settings.profileHint')}</p>
+        {profileLoading && !user ? (
+          <div className="profile-loading">{t('settings.profileLoading')}</div>
+        ) : user ? (
+          <dl className="profile-dl">
+            <div className="profile-row">
+              <dt>{t('settings.fieldDisplayName')}</dt>
+              <dd>{user.display_name || '—'}</dd>
+            </div>
+            <div className="profile-row">
+              <dt>{t('settings.fieldEmail')}</dt>
+              <dd>{user.email || '—'}</dd>
+            </div>
+            <div className="profile-row">
+              <dt>{t('settings.fieldRole')}</dt>
+              <dd>
+                <span className={`profile-role role-${(user.role || '').toLowerCase()}`}>
+                  {user.role || '—'}
+                </span>
+              </dd>
+            </div>
+            <div className="profile-row">
+              <dt>{t('settings.fieldStaffId')}</dt>
+              <dd>
+                <code className="profile-code">{user.staff_id || '—'}</code>
+              </dd>
+            </div>
+            {user.hospital_name && (
+              <div className="profile-row">
+                <dt>{t('settings.fieldHospital')}</dt>
+                <dd>{user.hospital_name}</dd>
+              </div>
+            )}
+            {user.facility && (
+              <div className="profile-row">
+                <dt>{t('settings.fieldFacility')}</dt>
+                <dd>{user.facility}</dd>
+              </div>
+            )}
+            <div className="profile-row">
+              <dt>{t('settings.fieldStatus')}</dt>
+              <dd>{user.status || '—'}</dd>
+            </div>
+            <div className="profile-row profile-row-muted">
+              <dt>{t('settings.fieldAccountId')}</dt>
+              <dd>
+                <code className="profile-code profile-code-small">{user.id}</code>
+              </dd>
+            </div>
+          </dl>
+        ) : (
+          <div className="profile-loading">{t('settings.profileUnavailable')}</div>
+        )}
+      </section>
 
       <section className="settings-section">
         <h2>{t('settings.theme')}</h2>

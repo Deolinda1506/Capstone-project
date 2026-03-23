@@ -115,6 +115,15 @@ def login(
     return TokenResponse(access_token=token, user=_user_response(user, db))
 
 
+@router.get("/me", response_model=UserResponse)
+def get_current_profile(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Return the authenticated user's profile (from JWT)."""
+    return _user_response(current_user, db)
+
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(
     body: RegisterRequest,

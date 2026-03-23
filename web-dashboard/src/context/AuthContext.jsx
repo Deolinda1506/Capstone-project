@@ -63,7 +63,30 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
-  const value = { user, loading, login, logout, getToken }
+  const refreshUser = useCallback(async () => {
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (!token) return null
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const text = await res.text()
+    let data = null
+    if (text) {
+      try {
+        data = JSON.parse(text)
+      } catch {
+        data = null
+      }
+    }
+    if (!res.ok || !data) {
+      return null
+    }
+    localStorage.setItem(USER_KEY, JSON.stringify(data))
+    setUser(data)
+    return data
+  }, [])
+
+  const value = { user, loading, login, logout, getToken, refreshUser }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
