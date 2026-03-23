@@ -1,6 +1,8 @@
 """
 Send welcome email when a patient is created and referral email when they are referred to hospital.
 Configure via env: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM.
+Default sender address (when EMAIL_FROM is unset): checkcarid@gmail.com — must match
+the authenticated SMTP account for Gmail (use an App Password, not your normal password).
 Optional: REFERRAL_HOSPITAL_NAME (e.g. Gasabo District Hospital).
 If not configured, emails are skipped (no error).
 """
@@ -31,7 +33,9 @@ def _init() -> None:
     _SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
     _SMTP_USER = os.getenv("SMTP_USER", "").strip()
     _SMTP_PASS = os.getenv("SMTP_PASSWORD", "").strip()
-    _EMAIL_FROM = os.getenv("EMAIL_FROM", _SMTP_USER or "carotidcheck@example.com").strip()
+    _EMAIL_FROM = (
+        os.getenv("EMAIL_FROM", "").strip() or _SMTP_USER or "checkcarid@gmail.com"
+    )
     _REFERRAL_HOSPITAL = os.getenv("REFERRAL_HOSPITAL_NAME", _REFERRAL_HOSPITAL).strip()
     if _SMTP_HOST and _SMTP_USER and _SMTP_PASS:
         _EMAIL_ENABLED = True
