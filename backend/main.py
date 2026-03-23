@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from backend.database import engine, Base
 import backend.models  # noqa: F401 — register models
@@ -98,25 +99,33 @@ def _ensure_postgres_schema():
     if "postgresql" not in str(engine.url).lower():
         return
 
+    _pg_tables = frozenset({"users", "hospitals", "patients", "scans", "results"})
+
     def _table_exists(table: str) -> bool:
+        if table not in _pg_tables:
+            return False
         with engine.connect() as conn:
             r = conn.execute(
                 text(
                     "SELECT EXISTS (SELECT FROM information_schema.tables "
-                    "WHERE table_schema = 'public' AND table_name = :t)"
-                ),
-                {"t": table},
+                    "WHERE table_schema = 'public' AND table_name = '"
+                    + table
+                    + "')"
+                )
             )
             return bool(r.scalar())
 
     def _column_names(table: str) -> set:
+        if table not in _pg_tables:
+            return set()
         with engine.connect() as conn:
             r = conn.execute(
                 text(
                     "SELECT column_name FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name = :t"
-                ),
-                {"t": table},
+                    "WHERE table_schema = 'public' AND table_name = '"
+                    + table
+                    + "'"
+                )
             )
             return {row[0] for row in r}
 
@@ -227,8 +236,8 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Includes localhost:* for Flutter web
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -248,6 +257,39 @@ def root():
 def health():
     """Lightweight check that the server is up. Use this to verify connectivity."""
     return {"status": "ok"}
+
+
+@app.get("/health/db")
+def health_db():
+    """DB connectivity + rough schema sanity (for ops; no secrets)."""
+    from sqlalchemy import text
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            dialect = engine.dialect.name
+            out = {"status": "ok", "dialect": dialect}
+            if dialect == "postgresql":
+                r = conn.execute(
+                    text(
+                        "SELECT COUNT(*) FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = 'users'"
+                    )
+                )
+                out["users_column_count"] = int(r.scalar() or 0)
+                r2 = conn.execute(
+                    text(
+                        "SELECT EXISTS (SELECT FROM information_schema.tables "
+                        "WHERE table_schema = 'public' AND table_name = 'users')"
+                    )
+                )
+                out["users_table_exists"] = bool(r2.scalar())
+            return out
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "error": str(e)},
+        )
 
 
 @app.get("/ml-status")
