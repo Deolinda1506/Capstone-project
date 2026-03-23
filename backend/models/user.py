@@ -28,4 +28,5 @@ class User(Base):
 
     hospital = relationship("Hospital", back_populates="users")
     patients = relationship("Patient", back_populates="user", cascade="all, delete-orphan")
-    scans = relationship("Scan", back_populates="user")
+    # Scan also has clinician_reviewed_by_id → users.id; disambiguate the uploader relationship
+    scans = relationship("Scan", back_populates="user", foreign_keys="[Scan.user_id]")
