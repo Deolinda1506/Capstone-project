@@ -30,7 +30,7 @@ Faculty, Bachelor of Software Engineering, ALU
 
 ## Abstract
 
-Stroke has become the third leading cause of death in Rwanda, with a median time from symptom onset to hospital arrival of 72 hours—far exceeding the critical 4.5-hour window for effective intervention. This “treatment vacuum” is driven by the lack of objective diagnostic tools at the community level and a fragmented referral chain. This research proposed and implemented **CarotidCheck**, a cloud-integrated software solution that uses artificial intelligence to automate carotid artery segmentation and Intima-Media Thickness (IMT) measurement from ultrasound images. The system evaluated Vision Transformer (ViT) and Attention U-Net architectures on the Momot (2022) dataset, selecting Attention U-Net for deployment due to superior validation performance (Dice ~0.94, Mean IoU ~0.88). CarotidCheck provides dual-layer diagnostics—early-stage risk (IMT) and advanced blockage (stenosis)—and triggers automated SMS and email alerts to Gasabo District Hospital when high-risk cases are detected. A FastAPI backend, Flutter mobile app for community health workers, and React web dashboard for clinicians enable end-to-end workflow from scan upload to hospital-side referral review. Results demonstrate that CarotidCheck can support objective, image-driven stroke triage at the community level, aligning with Rwanda’s Ministry of Health 4×4 Reform. Recommendations include field pilot validation, lumen segmentation for direct stenosis calculation, and integration of ultrasound metadata for improved IMT calibration.
+Stroke has become the third leading cause of death in Rwanda, with a median time from symptom onset to hospital arrival of 72 hours—far exceeding the critical 4.5-hour window for effective intervention. This “treatment vacuum” is driven by the lack of objective diagnostic tools at the community level and a fragmented referral chain. This research proposed and implemented **CarotidCheck**, a cloud-integrated software solution that uses artificial intelligence to automate carotid artery segmentation and Intima-Media Thickness (IMT) measurement from ultrasound images. The system evaluated Vision Transformer (ViT) and Attention U-Net architectures on the Momot (2022) dataset, selecting Attention U-Net for deployment due to superior validation performance (Dice ~0.94, Mean IoU ~0.88). CarotidCheck provides dual-layer diagnostics—early-stage risk (IMT) and advanced blockage (stenosis). **Clinician awareness of pending high-risk referrals is provided in the web dashboard** through a notification bell and badge: the dashboard calls the backend API on a timer and counts pending high-risk cases—**SMS and email are not required for that in-app behaviour.** Optional SMS (Africa’s Talking) and email (SMTP) can be configured to supplement alerts to Gasabo District Hospital. A FastAPI backend, Flutter mobile app for community health workers, and React web dashboard for clinicians enable end-to-end workflow from scan upload to hospital-side referral review. Results demonstrate that CarotidCheck can support objective, image-driven stroke triage at the community level, aligning with Rwanda’s Ministry of Health 4×4 Reform. Recommendations include field pilot validation, lumen segmentation for direct stenosis calculation, and integration of ultrasound metadata for improved IMT calibration.
 
 **Keywords:** Carotid ultrasound, Intima-Media Thickness, carotid triage, Attention U-Net, Vision Transformer, Rwanda, cloud-integrated diagnostics, NASCET
 
@@ -109,7 +109,7 @@ Globally, stroke is a leading cause of mortality and long-term disability, accou
 
 Traditionally, interventions relied on hospital-based imaging (CT/MRI) and public awareness campaigns such as the FAST protocol (Face, Arm, Speech, Time). While valuable, these approaches face limitations in rural areas where neurologists are scarce and diagnostic equipment is centralized in urban hospitals (Liu et al., 2024). Cloud-integrated computer vision offers a transformative alternative. By deploying high-performance models such as Vision Transformers (ViT) and Attention U-Net, along with preprocessing pipelines using padding, resizing, and Albumentations-based augmentation, smartphones can now support objective biomarker identification from carotid ultrasound images.
 
-This research proposed **CarotidCheck**, a platform bridging the "Treatment Vacuum" by combining traditional medical knowledge with a cloud-synchronized referral ecosystem. Using the Common Carotid Artery Ultrasound dataset (Momot, 2022), CarotidCheck segments carotid artery walls, automates Intima-Media Thickness (IMT) measurement, and triggers automated SMS and email notifications to Gasabo District Hospital when high-risk cases are detected—demonstrating an end-to-end workflow from community screening to hospital response.
+This research proposed **CarotidCheck**, a platform bridging the "Treatment Vacuum" by combining traditional medical knowledge with a cloud-synchronized referral ecosystem. Using the Common Carotid Artery Ultrasound dataset (Momot, 2022), CarotidCheck segments carotid artery walls, automates Intima-Media Thickness (IMT) measurement, and surfaces high-risk cases to clinicians **via the web dashboard** (API-polled notification bell and badge counting pending referrals). Optional SMS and email channels can augment that workflow when external services are configured—demonstrating an end-to-end path from community screening to hospital response.
 
 ## 1.2 Problem statement
 
@@ -254,7 +254,7 @@ The Momot (2022) Common Carotid Artery Ultrasound Dataset was used for training 
 
 ### Functional Requirements
 
-The system must allow Community Health Workers (CHWs) to register and log in, with support for online authentication and offline login after a first successful session. CHWs must be able to create and manage patients and to capture or upload carotid ultrasound images. The system must segment carotid artery walls and return IMT in millimetres, risk level, and stenosis percentage. The result screen must display an AI segmentation overlay. High-risk scans must trigger SMS and email alerts to Gasabo District Hospital. Clinicians must be able to view high-risk referrals and past scan results. The system must store scans and results for longitudinal tracking.
+The system must allow Community Health Workers (CHWs) to register and log in, with support for online authentication and offline login after a first successful session. CHWs must be able to create and manage patients and to capture or upload carotid ultrasound images. The system must segment carotid artery walls and return IMT in millimetres, risk level, and stenosis percentage. The result screen must display an AI segmentation overlay. **Clinicians must be able to see pending high-risk referrals through the web dashboard**, including an in-app notification indicator (bell and numeric badge) driven by periodic API requests to list pending high-risk cases—**this does not depend on SMS or email.** The implementation may optionally invoke SMS and email services when configured, to supplement hospital alerting. Clinicians must be able to view high-risk referrals and past scan results. The system must store scans and results for longitudinal tracking.
 
 ### Non-Functional Requirements
 
@@ -301,17 +301,17 @@ This section presents the implementation of the system by detailing how the desi
 
 ### 4.1.2 Description of implementation tools and technology
 
-The backend runs on Python 3.12 and uses FastAPI for the REST API with asynchronous request handling. TensorFlow/Keras 2.x loads the Attention U-Net model and performs inference; OpenCV (`cv2`) handles image preprocessing and mask overlay. The mobile client for CHWs is built with Flutter 3.x and Dart 3.10+. SQLAlchemy 2.x serves as the ORM for PostgreSQL on Render (production) and SQLite (development). Africa's Talking sandbox is used for SMS alerts when high-risk cases are detected. A separate React and Vite web dashboard serves clinicians at the hospital.
+The backend runs on Python 3.12 and uses FastAPI for the REST API with asynchronous request handling. TensorFlow/Keras 2.x loads the Attention U-Net model and performs inference; OpenCV (`cv2`) handles image preprocessing and mask overlay. The mobile client for CHWs is built with Flutter 3.x and Dart 3.10+. SQLAlchemy 2.x serves as the ORM for PostgreSQL on Render (production) and SQLite (development). **For clinicians, the React and Vite web dashboard shows pending high-risk referrals using a notification bell and badge that poll the REST API on a timer; SMS and email are not required for that behaviour.** Africa’s Talking (SMS) and SMTP (email) may be configured for optional outbound alerts when high-risk cases are detected.
 
 #### Key implementation modules
 
 | Module | Responsibility |
 |--------|----------------|
 | `backend/inference.py` | Loads the Attention U-Net model, preprocesses input images (padding and resizing to 256×256), performs segmentation, computes Intima-Media Thickness (IMT) using pixel-to-millimetre calibration, and derives stenosis (NASCET method) and risk level. |
-| `backend/routers/scans.py` | Handles `POST /scans/upload`; invokes the inference pipeline, stores scan results in the database, and triggers SMS/email notifications for high-risk cases. |
+| `backend/routers/scans.py` | Handles `POST /scans/upload`; invokes the inference pipeline, stores scan results in the database, and may trigger **optional** SMS/email for high-risk cases when services are configured. Pending referrals are listed via API for the dashboard bell/badge. |
 | `backend/latency.py` | Monitors inference performance and exposes `GET /latency` for performance metrics. |
 | `app/lib/screens/` | Flutter UI: login, dashboard, scan capture, result display, referral list for CHWs. |
-| `web-dashboard/` | React + Vite app for clinicians: authentication, high-risk referrals, scan analysis, image visualization, CSV export, referral status, clinical notes, IMT trend charts. |
+| `web-dashboard/` | React + Vite app for clinicians: authentication, high-risk referrals, scan analysis, image visualization, CSV export, referral status, clinical notes, IMT trend charts. **Notification bell and badge:** periodic API calls to list pending high-risk referrals (no SMS/email required). |
 
 ## 4.2 Graphical view of the project
 
@@ -399,14 +399,15 @@ All components interacted successfully, and no data loss or inconsistencies were
 | Patient registration | Pass |
 | Scan upload and processing | Pass |
 | AI analysis (IMT, risk, stenosis) | Pass |
-| Alert notifications | Pass (sandbox / when services configured) |
+| In-app dashboard notifications (bell/badge, pending high-risk count) | Pass |
+| Optional SMS/email alerts | Pass when Africa’s Talking / SMTP configured; otherwise N/A (dashboard still works) |
 | Clinician dashboard access | Pass |
 
 The system maintained acceptable response time and performance under normal usage conditions.
 
 ### 4.3.7 Acceptance testing report
 
-Acceptance testing was conducted based on real user workflows, including CHW login, patient management, scan capture, and result review. The system met all key requirements, including carotid wall segmentation, IMT calculation, risk classification, and referral notifications to Gasabo District Hospital. The solution is considered ready for pilot deployment, pending real-world validation and user feedback.
+Acceptance testing was conducted based on real user workflows, including CHW login, patient management, scan capture, and result review. The system met all key requirements, including carotid wall segmentation, IMT calculation, risk classification, and **clinician visibility of referrals through the web dashboard** (including the in-app notification indicator driven by the API). Optional SMS/email to Gasabo District Hospital applies when external services are configured. The solution is considered ready for pilot deployment, pending real-world validation and user feedback.
 # CHAPTER FIVE: THE DESCRIPTION OF THE RESULTS / SYSTEM
 
 ## 5.1 Description of Results
@@ -446,7 +447,7 @@ Testing with the Momot dataset and simulated inputs demonstrates that the system
 
 **Research Question 2:** CarotidCheck delivers objective, image-driven biomarkers (IMT and stenosis) that detect preclinical arterial thickening. Unlike the FAST protocol, which detects post-onset stroke symptoms, CarotidCheck supports earlier intervention.
 
-**Research Question 3:** The React web dashboard and automated SMS/email alerts enable real-time notification of high-risk cases. Clinicians can access referrals, scan images, and patient histories in one place, reducing the delay between community screening and hospital action and helping to address the 72-hour “Treatment Vacuum.”
+**Research Question 3:** The React web dashboard provides **real-time awareness of high-risk cases** through API-polled in-app notifications (bell and badge counting pending referrals); **SMS and email are not required for that mechanism** but can be added as optional outbound alerts. Clinicians can access referrals, scan images, and patient histories in one place, reducing the delay between community screening and hospital action and helping to address the 72-hour “Treatment Vacuum.”
 
 ### 5.2.2 Implications
 
@@ -467,7 +468,7 @@ This research developed and implemented **CarotidCheck**, a cloud-integrated sof
 
 1. **Model comparison:** The Attention U-Net outperformed the Vision Transformer in carotid artery segmentation (Dice ~0.94 vs. ~0.87) and was selected for deployment. Both architectures remain viable for medical imaging in resource-limited settings.
 
-2. **Problem addressed:** CarotidCheck addresses the "Treatment Vacuum" by providing objective, image-driven IMT and stenosis measurements at the community level. Automated referral alerts are sent to Gasabo District Hospital for high-risk cases.
+2. **Problem addressed:** CarotidCheck addresses the "Treatment Vacuum" by providing objective, image-driven IMT and stenosis measurements at the community level. **High-risk referrals are visible to clinicians in the web dashboard** (notification bell and badge via API polling); **optional** SMS/email can further alert Gasabo District Hospital when those services are configured.
 
 3. **End-to-end solution:** The system integrates segmentation, IMT calculation, risk classification, and referral notification into a single pipeline, accessible via a Flutter mobile app for CHWs, a React web dashboard for clinicians, and a FastAPI backend.
 
@@ -502,7 +503,8 @@ This research developed and implemented **CarotidCheck**, a cloud-integrated sof
 
 - The Momot dataset includes only 11 subjects, which may not fully represent pathological diversity.  
 - Testing was performed with simulated mobile input; field conditions (lighting, probe quality, operator skill) may affect performance.  
-- SMS and email alerts rely on configured services (Africa’s Talking, SMTP); sandbox testing does not deliver messages to real phones.  
+- **Clinician in-app notifications** (dashboard bell and badge) rely only on the API and do not require SMS or email.  
+- Optional SMS and email alerts rely on configured services (Africa’s Talking, SMTP); sandbox testing does not deliver messages to real phones.  
 
 ---
 
