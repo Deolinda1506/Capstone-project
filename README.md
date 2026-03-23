@@ -2,7 +2,7 @@
 
 AI-powered carotid ultrasound screening for stroke risk assessment in Rwanda. Community health workers capture scans, get instant IMT (intima-media thickness) and risk levels, and refer high-risk patients to hospitals.
 
-**Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · [Latency stats](https://carotidcheck-api.onrender.com/latency) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com](https://carotidcheck-dashboard.onrender.com) (see `render.yaml`) · **Demo video:** [5-min demo](https://drive.google.com/file/d/1cF0XLiqFo-9NMABwXhOqR2R74O_6UWwN/view?usp=sharing)
+**Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · [Latency stats](https://carotidcheck-api.onrender.com/latency) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com](https://carotidcheck-dashboard.onrender.com) (see `render.yaml`) · **Android APK (Google Drive):** [app-release.apk](https://drive.google.com/file/d/13zI5Jj2Ycf1280hRFSSBl9bhABMODMUz/view?usp=sharing) · **Demo video:** [5-min demo](https://drive.google.com/file/d/1cF0XLiqFo-9NMABwXhOqR2R74O_6UWwN/view?usp=sharing)
 
 ---
 
@@ -305,7 +305,9 @@ flutter build web
 
 ### Android APK
 
-**Build:**
+**Pre-built release (download):** [Google Drive — app-release.apk](https://drive.google.com/file/d/13zI5Jj2Ycf1280hRFSSBl9bhABMODMUz/view?usp=sharing) *(install on Android; allow installs from Drive / your browser if prompted).*
+
+**Build locally:**
 ```bash
 cd app
 flutter build apk --release --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
@@ -313,7 +315,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://carotidcheck-api.
 ```
 
 **Install on Android device:**
-1. Transfer `app-release.apk` to your phone (USB, email, cloud drive, or download from a release).
+1. Transfer `app-release.apk` to your phone (USB, email, [Google Drive link above](https://drive.google.com/file/d/13zI5Jj2Ycf1280hRFSSBl9bhABMODMUz/view?usp=sharing), or download from a release).
 2. On your Android device: **Settings → Security** → enable **Install from unknown sources** (or **Install unknown apps** for the file manager/browser you use).
 3. Open the APK file and tap **Install**.
 4. The APK built with the command above has the deployed API URL (`https://carotidcheck-api.onrender.com`) compiled in via `--dart-define`.

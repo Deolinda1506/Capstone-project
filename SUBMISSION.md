@@ -2,6 +2,8 @@
 
 Use this template for your report (Testing Results, Analysis, Discussion, Recommendations).
 
+**Android APK (Google Drive):** [app-release.apk](https://drive.google.com/file/d/13zI5Jj2Ycf1280hRFSSBl9bhABMODMUz/view?usp=sharing)
+
 ---
 
 ## Testing Results [Screenshots with relevant demos]
