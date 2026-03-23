@@ -87,55 +87,50 @@ def _ensure_sqlite_columns():
 def _ensure_postgres_schema():
     """
     Add missing columns on PostgreSQL (e.g. Render) when the DB predates model changes.
-    SQLite uses _ensure_sqlite_columns instead.
+    Each ALTER runs in its own transaction so one failure does not roll back the rest
+    (a single failed DDL in a batch would previously undo all earlier ADD COLUMNs).
     """
+    import logging
     from sqlalchemy import text
     from backend.database import engine
 
+    log = logging.getLogger(__name__)
     if "postgresql" not in str(engine.url).lower():
         return
-    try:
-        with engine.begin() as conn:
-            r = conn.execute(
-                text(
-                    "SELECT EXISTS (SELECT FROM information_schema.tables "
-                    "WHERE table_schema = 'public' AND table_name = 'hospitals')"
-                )
-            )
-            if r.scalar():
-                r2 = conn.execute(
-                    text(
-                        "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_schema = 'public' AND table_name = 'hospitals'"
-                    )
-                )
-                hcols = {row[0] for row in r2}
-                for col, ddl in (
-                    ("address", "VARCHAR(512)"),
-                    ("province", "VARCHAR(128)"),
-                    ("district", "VARCHAR(128)"),
-                    ("sector", "VARCHAR(128)"),
-                    ("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
-                    ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
-                ):
-                    if col not in hcols:
-                        conn.execute(text(f"ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS {col} {ddl}"))
 
+    def _table_exists(table: str) -> bool:
+        with engine.connect() as conn:
             r = conn.execute(
                 text(
                     "SELECT EXISTS (SELECT FROM information_schema.tables "
-                    "WHERE table_schema = 'public' AND table_name = 'users')"
-                )
+                    "WHERE table_schema = 'public' AND table_name = :t)"
+                ),
+                {"t": table},
             )
-            if not r.scalar():
-                return
-            r2 = conn.execute(
+            return bool(r.scalar())
+
+    def _column_names(table: str) -> set:
+        with engine.connect() as conn:
+            r = conn.execute(
                 text(
                     "SELECT column_name FROM information_schema.columns "
-                    "WHERE table_schema = 'public' AND table_name = 'users'"
-                )
+                    "WHERE table_schema = 'public' AND table_name = :t"
+                ),
+                {"t": table},
             )
-            ucols = {row[0] for row in r2}
+            return {row[0] for row in r}
+
+    def _ddl(sql: str) -> None:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(sql))
+        except Exception:
+            log.warning("Postgres DDL failed (non-fatal): %s", sql[:160], exc_info=True)
+
+    try:
+        # Users first so /auth/login and /auth/forgot-password work even if later DDL fails.
+        if _table_exists("users"):
+            ucols = _column_names("users")
             for col, ddl in (
                 ("firebase_uid", "VARCHAR(128)"),
                 ("password_hash", "VARCHAR(255)"),
@@ -154,88 +149,57 @@ def _ensure_postgres_schema():
                 ("password_reset_expires", "TIMESTAMP"),
             ):
                 if col not in ucols:
-                    conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {ddl}"))
+                    _ddl(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {ddl}")
 
-            # patients (older DBs may lack name/age/soft-delete)
-            r = conn.execute(
-                text(
-                    "SELECT EXISTS (SELECT FROM information_schema.tables "
-                    "WHERE table_schema = 'public' AND table_name = 'patients')"
-                )
-            )
-            if r.scalar():
-                r2 = conn.execute(
-                    text(
-                        "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_schema = 'public' AND table_name = 'patients'"
-                    )
-                )
-                pcols = {row[0] for row in r2}
-                for col, ddl in (
-                    ("name", "VARCHAR(255)"),
-                    ("age", "INTEGER"),
-                    ("email", "VARCHAR(255)"),
-                    ("deleted_at", "TIMESTAMP"),
-                    ("is_deleted", "BOOLEAN DEFAULT FALSE"),
-                    ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
-                ):
-                    if col not in pcols:
-                        conn.execute(text(f"ALTER TABLE patients ADD COLUMN IF NOT EXISTS {col} {ddl}"))
+        if _table_exists("hospitals"):
+            hcols = _column_names("hospitals")
+            for col, ddl in (
+                ("address", "VARCHAR(512)"),
+                ("province", "VARCHAR(128)"),
+                ("district", "VARCHAR(128)"),
+                ("sector", "VARCHAR(128)"),
+                ("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+                ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+            ):
+                if col not in hcols:
+                    _ddl(f"ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS {col} {ddl}")
 
-            # scans (clinician review queue columns — missing → 500 on /scans/high-risk)
-            r = conn.execute(
-                text(
-                    "SELECT EXISTS (SELECT FROM information_schema.tables "
-                    "WHERE table_schema = 'public' AND table_name = 'scans')"
-                )
-            )
-            if r.scalar():
-                r2 = conn.execute(
-                    text(
-                        "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_schema = 'public' AND table_name = 'scans'"
-                    )
-                )
-                scols = {row[0] for row in r2}
-                for col, ddl in (
-                    ("deleted_at", "TIMESTAMP"),
-                    ("is_deleted", "BOOLEAN DEFAULT FALSE"),
-                    (
-                        "clinician_review_status",
-                        "VARCHAR(20) DEFAULT 'pending'",
-                    ),
-                    ("clinician_reviewed_at", "TIMESTAMP"),
-                    ("clinician_reviewed_by_id", "VARCHAR(36)"),
-                    ("clinical_notes", "TEXT"),
-                ):
-                    if col not in scols:
-                        conn.execute(text(f"ALTER TABLE scans ADD COLUMN IF NOT EXISTS {col} {ddl}"))
+        if _table_exists("patients"):
+            pcols = _column_names("patients")
+            for col, ddl in (
+                ("name", "VARCHAR(255)"),
+                ("age", "INTEGER"),
+                ("email", "VARCHAR(255)"),
+                ("deleted_at", "TIMESTAMP"),
+                ("is_deleted", "BOOLEAN DEFAULT FALSE"),
+                ("updated_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+            ):
+                if col not in pcols:
+                    _ddl(f"ALTER TABLE patients ADD COLUMN IF NOT EXISTS {col} {ddl}")
 
-            # results
-            r = conn.execute(
-                text(
-                    "SELECT EXISTS (SELECT FROM information_schema.tables "
-                    "WHERE table_schema = 'public' AND table_name = 'results')"
-                )
-            )
-            if r.scalar():
-                r2 = conn.execute(
-                    text(
-                        "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_schema = 'public' AND table_name = 'results'"
-                    )
-                )
-                rcols = {row[0] for row in r2}
-                for col, ddl in (
-                    ("stenosis_pct", "DOUBLE PRECISION"),
-                    ("stenosis_source", "VARCHAR(32)"),
-                ):
-                    if col not in rcols:
-                        conn.execute(text(f"ALTER TABLE results ADD COLUMN IF NOT EXISTS {col} {ddl}"))
+        if _table_exists("scans"):
+            scols = _column_names("scans")
+            for col, ddl in (
+                ("deleted_at", "TIMESTAMP"),
+                ("is_deleted", "BOOLEAN DEFAULT FALSE"),
+                ("clinician_review_status", "VARCHAR(20) DEFAULT 'pending'"),
+                ("clinician_reviewed_at", "TIMESTAMP"),
+                ("clinician_reviewed_by_id", "VARCHAR(36)"),
+                ("clinical_notes", "TEXT"),
+            ):
+                if col not in scols:
+                    _ddl(f"ALTER TABLE scans ADD COLUMN IF NOT EXISTS {col} {ddl}")
+
+        if _table_exists("results"):
+            rcols = _column_names("results")
+            for col, ddl in (
+                ("stenosis_pct", "DOUBLE PRECISION"),
+                ("stenosis_source", "VARCHAR(32)"),
+            ):
+                if col not in rcols:
+                    _ddl(f"ALTER TABLE results ADD COLUMN IF NOT EXISTS {col} {ddl}")
     except Exception:
-        import logging
-
-        logging.getLogger(__name__).exception("Postgres schema ensure failed (non-fatal)")
+        log.exception("Postgres schema introspection failed (non-fatal)")
 
 
 @asynccontextmanager
