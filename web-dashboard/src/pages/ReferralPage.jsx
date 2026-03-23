@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { getScanResult, fetchScanImageBlob, patchScanReview } from '../api/client'
+import { getScanResult, patchScanReview } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useLocale } from '../context/LocaleContext'
+import ScanThumbnail from '../components/ScanThumbnail'
 import './ReferralPage.css'
 
 export default function ReferralPage() {
@@ -10,14 +11,11 @@ export default function ReferralPage() {
   const { user } = useAuth()
   const { t, dateLocaleTag } = useLocale()
   const [result, setResult] = useState(null)
-  const [imageUrl, setImageUrl] = useState(null)
-  const [imageError, setImageError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
-  const imageUrlRef = useRef(null)
 
   const canReview =
     user && ['admin', 'clinician'].includes((user.role || '').toLowerCase())
@@ -35,25 +33,6 @@ export default function ReferralPage() {
       })
       .finally(() => setLoading(false))
   }, [scanId])
-
-  useEffect(() => {
-    if (!result?.has_image) return
-    setImageError(false)
-    fetchScanImageBlob(scanId)
-      .then((blob) => {
-        if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current)
-        const url = URL.createObjectURL(blob)
-        imageUrlRef.current = url
-        setImageUrl(url)
-      })
-      .catch(() => setImageError(true))
-    return () => {
-      if (imageUrlRef.current) {
-        URL.revokeObjectURL(imageUrlRef.current)
-        imageUrlRef.current = null
-      }
-    }
-  }, [scanId, result?.has_image])
 
   if (loading) {
     return (
@@ -73,6 +52,7 @@ export default function ReferralPage() {
 
   const isReviewed = result.clinician_review_status === 'reviewed'
   const isHighRisk = result.is_high_risk
+  const pageTitleKey = isHighRisk ? 'referral.title' : 'referral.analysisTitle'
 
   const handleSaveReview = async (status) => {
     if (!canReview || !isHighRisk) return
@@ -98,7 +78,7 @@ export default function ReferralPage() {
         <Link to="/dashboard">{t('referral.back')}</Link>
       </div>
       <h1>
-        {t('referral.title')} {result.patient_name || result.patient_identifier}
+        {t(pageTitleKey)} {result.patient_name || result.patient_identifier}
       </h1>
       {isHighRisk && (
         <div className="review-banner">
@@ -216,10 +196,13 @@ export default function ReferralPage() {
           )}
         </div>
         <div className="referral-image">
-          {imageUrl && !imageError ? (
-            <img src={imageUrl} alt={t('referral.scanAlt')} onError={() => setImageError(true)} />
-          ) : result.has_image && imageError ? (
-            <div className="image-placeholder">{t('referral.imageFailed')}</div>
+          {result.has_image ? (
+            <ScanThumbnail
+              scanId={scanId}
+              hasImage
+              variant="hero"
+              alt={t('referral.scanAlt')}
+            />
           ) : (
             <div className="image-placeholder">{t('referral.noImage')}</div>
           )}

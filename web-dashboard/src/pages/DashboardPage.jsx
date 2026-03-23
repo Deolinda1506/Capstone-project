@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useSearch } from '../context/SearchContext'
 import { useLocale } from '../context/LocaleContext'
 import { getHighRisk, getScansWithResults } from '../api/client'
+import ScanThumbnail from '../components/ScanThumbnail'
 import {
   BarChart,
   Bar,
@@ -58,6 +59,18 @@ export default function DashboardPage() {
         r.patient_id?.toLowerCase().includes(q),
     )
   }, [highRisk, searchQuery])
+
+  const filteredAllScans = useMemo(() => {
+    if (!searchQuery.trim()) return allScans
+    const q = searchQuery.toLowerCase()
+    return allScans.filter(
+      (s) =>
+        s.patient_name?.toLowerCase().includes(q) ||
+        s.patient_identifier?.toLowerCase().includes(q) ||
+        s.scan_id?.toLowerCase().includes(q) ||
+        s.patient_id?.toLowerCase().includes(q),
+    )
+  }, [allScans, searchQuery])
 
   const riskDistribution = useMemo(() => {
     const counts = { Low: 0, Moderate: 0, High: 0 }
@@ -147,6 +160,80 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <section className="analyses-section">
+        <h2>{t('dashboard.analysesTitle')}</h2>
+        <p className="analyses-section-hint">{t('dashboard.analysesHint')}</p>
+        {filteredAllScans.length === 0 ? (
+          <div className="empty-state">
+            {t('dashboard.analysesEmpty')}
+            {searchQuery ? t('dashboard.emptySearch') : ''}.
+          </div>
+        ) : (
+          <div className="analyses-table-wrap">
+            <table className="analyses-table">
+              <thead>
+                <tr>
+                  <th className="col-preview">{t('dashboard.colPreview')}</th>
+                  <th>{t('dashboard.colPatient')}</th>
+                  <th>{t('dashboard.colPatientId')}</th>
+                  <th>{t('dashboard.colImt')}</th>
+                  <th>{t('dashboard.colRisk')}</th>
+                  <th>{t('dashboard.colReferral')}</th>
+                  <th>{t('dashboard.colDate')}</th>
+                  <th>{t('dashboard.colAction')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAllScans.map((s) => (
+                  <tr key={s.scan_id}>
+                    <td className="col-preview">
+                      <ScanThumbnail
+                        scanId={s.scan_id}
+                        hasImage={s.has_image}
+                        alt=""
+                      />
+                    </td>
+                    <td>{s.patient_name || '—'}</td>
+                    <td>
+                      <code className="analyses-id">{s.patient_identifier}</code>
+                    </td>
+                    <td>{s.imt_mm != null ? `${s.imt_mm} mm` : '—'}</td>
+                    <td>
+                      <span className={`risk-badge risk-${(s.risk_level || '').toLowerCase()}`}>
+                        {s.risk_level || '—'}
+                      </span>
+                    </td>
+                    <td>
+                      {s.is_high_risk ? (
+                        <span
+                          className={`review-pill ${s.clinician_review_status === 'reviewed' ? 'reviewed' : 'pending'}`}
+                        >
+                          {s.clinician_review_status === 'reviewed'
+                            ? t('dashboard.reviewed')
+                            : t('dashboard.pending')}
+                        </span>
+                      ) : (
+                        <span className="review-pill na">—</span>
+                      )}
+                    </td>
+                    <td className="analyses-date">
+                      {s.created_at
+                        ? new Date(s.created_at).toLocaleString(dateLocaleTag)
+                        : '—'}
+                    </td>
+                    <td>
+                      <Link to={`/referral/${s.scan_id}`} className="analyses-open">
+                        {t('dashboard.openAnalysis')}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <section className="referrals-section">
         <h2>{t('dashboard.referralsTitle')}</h2>
         <p className="referrals-section-hint">{t('dashboard.referralsHint')}</p>
@@ -173,39 +260,46 @@ export default function DashboardPage() {
           <div className="referrals-grid">
             {filteredHighRisk.map((r) => (
               <Link key={r.scan_id} to={`/referral/${r.scan_id}`} className="referral-card">
-                <div className="referral-header">
-                  <span className="referral-patient">
-                    {r.patient_name || r.patient_identifier}
-                  </span>
-                  <span className="referral-badges">
-                    <span
-                      className={`review-status-badge ${r.clinician_review_status === 'reviewed' ? 'reviewed' : 'pending'}`}
-                    >
-                      {r.clinician_review_status === 'reviewed'
-                        ? t('dashboard.reviewed')
-                        : t('dashboard.pending')}
-                    </span>
-                    <span className={`risk-badge risk-${(r.risk_level || '').toLowerCase()}`}>
-                      {r.risk_level || 'High'}
-                    </span>
-                  </span>
-                </div>
-                <div className="referral-meta">
-                  {r.patient_name && (
-                    <span className="referral-id">
-                      {t('dashboard.id')} {r.patient_identifier}
-                    </span>
-                  )}
-                  {r.patient_age != null && (
-                    <span className="referral-age">
-                      {t('dashboard.age')} {r.patient_age}
-                    </span>
-                  )}
-                  IMT: {r.imt_mm} mm
-                  {r.plaque_detected && <span className="plaque">{t('dashboard.plaque')}</span>}
-                </div>
-                <div className="referral-date">
-                  {r.created_at ? new Date(r.created_at).toLocaleString(dateLocaleTag) : '—'}
+                <div className="referral-card-inner">
+                  <div className="referral-card-thumb" aria-hidden>
+                    <ScanThumbnail scanId={r.scan_id} hasImage={r.has_image} alt="" />
+                  </div>
+                  <div className="referral-card-body">
+                    <div className="referral-header">
+                      <span className="referral-patient">
+                        {r.patient_name || r.patient_identifier}
+                      </span>
+                      <span className="referral-badges">
+                        <span
+                          className={`review-status-badge ${r.clinician_review_status === 'reviewed' ? 'reviewed' : 'pending'}`}
+                        >
+                          {r.clinician_review_status === 'reviewed'
+                            ? t('dashboard.reviewed')
+                            : t('dashboard.pending')}
+                        </span>
+                        <span className={`risk-badge risk-${(r.risk_level || '').toLowerCase()}`}>
+                          {r.risk_level || 'High'}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="referral-meta">
+                      {r.patient_name && (
+                        <span className="referral-id">
+                          {t('dashboard.id')} {r.patient_identifier}
+                        </span>
+                      )}
+                      {r.patient_age != null && (
+                        <span className="referral-age">
+                          {t('dashboard.age')} {r.patient_age}
+                        </span>
+                      )}
+                      IMT: {r.imt_mm} mm
+                      {r.plaque_detected && <span className="plaque">{t('dashboard.plaque')}</span>}
+                    </div>
+                    <div className="referral-date">
+                      {r.created_at ? new Date(r.created_at).toLocaleString(dateLocaleTag) : '—'}
+                    </div>
+                  </div>
                 </div>
               </Link>
             ))}

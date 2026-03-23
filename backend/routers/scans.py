@@ -182,7 +182,7 @@ async def upload_scan_image(
 
 @router.get("/with-results")
 def list_scans_with_results(
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
     name: Annotated[str | None, Query(description="Filter by patient name")] = None,
     db: Annotated[Session, Depends(get_db)] = ...,
     current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
@@ -228,7 +228,7 @@ def list_scans_with_results(
 
 @router.get("/high-risk")
 def list_high_risk_referrals(
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
     name: Annotated[str | None, Query(description="Filter by patient name (case-insensitive)")] = None,
     review_status: Annotated[
         Literal["pending", "reviewed", "all"],
