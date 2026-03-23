@@ -10,7 +10,7 @@ PreferredSizeWidget appPageAppBar(
   String fallbackPath = '/',
   List<Widget>? actions,
   Widget? leading,
-  double titleSpacing = 10,
+  double titleSpacing = 14,
 }) {
   return AppBar(
     title: AppLogo.titleWithLogo(

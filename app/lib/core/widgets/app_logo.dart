@@ -17,7 +17,7 @@ class AppLogo extends StatelessWidget {
     BuildContext context,
     String text, {
     double logoHeight = 36,
-    double spacing = 10,
+    double spacing = 14,
   }) {
     return Row(
       mainAxisSize: MainAxisSize.min,

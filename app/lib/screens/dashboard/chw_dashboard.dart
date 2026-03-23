@@ -28,7 +28,7 @@ class ChwDashboard extends StatelessWidget {
           mainAxisSize: MainAxisSize.max,
           children: [
             const AppLogo(height: 36, showInAppBar: true),
-            const SizedBox(width: 8),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 context.l10n.t('appName'),

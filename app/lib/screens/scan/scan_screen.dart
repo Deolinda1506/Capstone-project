@@ -212,6 +212,19 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     XFile? xfile;
+    if (source == ImageSource.gallery) {
+      // On desktop/simulator, use system file picker so user can choose Downloads.
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+        allowMultiple: false,
+      );
+      final picked = result?.files.single.bytes;
+      if (picked != null && mounted) {
+        setState(() => _imageBytes = picked);
+        return;
+      }
+    }
     try {
       xfile = await picker.pickImage(
         source: source,
@@ -239,18 +252,6 @@ class _ScanScreenState extends State<ScanScreen> {
           _imageBytes = bytes;
         });
       }
-    }
-  }
-
-  Future<void> _pickFromFiles() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      withData: true,
-      allowMultiple: false,
-    );
-    final bytes = result?.files.single.bytes;
-    if (bytes != null && mounted) {
-      setState(() => _imageBytes = bytes);
     }
   }
 
@@ -431,27 +432,29 @@ class _ScanScreenState extends State<ScanScreen> {
                       label: Text(context.l10n.t('gallery')),
                     ),
                   ),
-                  SizedBox(
-                    width: 220,
-                    child: OutlinedButton.icon(
-                      onPressed: _pickFromFiles,
-                      icon: const Icon(Icons.folder_open),
-                      label: const Text('Files (Downloads)'),
-                    ),
-                  ),
                 ],
               ),
-              if (_imageBytes != null) ...[
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _uploading ? null : () => _analyze(context),
-                  child: _uploading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(context.l10n.t('analyze')),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: (_uploading || _imageBytes == null)
+                    ? null
+                    : () => _analyze(context),
+                child: _uploading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(context.l10n.t('analyze')),
+              ),
+              if (_imageBytes == null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  context.l10n.t('noImageCaptured'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
                 ),
               ],
             ],
