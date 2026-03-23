@@ -84,6 +84,6 @@ Ultimately, this software directly addresses the catastrophic 72-hour delay in s
 
 ## 1.8 Research Timeline
 
-*See Figure 1.1: Project Gantt Chart and Research Timeline*
+*See Figure 1.1: CarotidCheck 3-Month Research Project Gantt Chart (Janvier–Mars 2026).*
 
-![Figure 1.1: Project Gantt Chart and Research Timeline](figures/figure-1.1.svg)
+![Figure 1.1: CarotidCheck 3-Month Research Project Gantt Chart](figures/figure-1.1.svg)

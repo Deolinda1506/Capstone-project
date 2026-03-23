@@ -28,7 +28,7 @@ BSc. in Software Engineering | Gnon Deolinda Bio Bogore | Supervisor: Tunde Isia
 
 ## Figures
 
-- Figure 1.1: `figures/figure-1.1.svg` — Gantt / timeline  
+- Figure 1.1: `figures/figure-1.1.svg` — CarotidCheck 3-month Gantt (Jan–Mar 2026)  
 - Figures 3.x, 4.x, 5.x: embed screenshots and diagrams when building the final PDF  
 
 ---

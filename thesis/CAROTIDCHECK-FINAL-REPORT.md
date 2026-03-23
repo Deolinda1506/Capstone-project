@@ -52,7 +52,7 @@ References
 
 ## List of Figures
 
-- Figure 1.1: Project Gantt Chart and Research Timeline (January–March 2026)  
+- Figure 1.1: CarotidCheck 3-Month Research Project Gantt Chart (Janvier–Mars 2026)  
 - Figure 3.1: CarotidCheck UML Class Diagram  
 - Figure 3.2: Client-Server Architecture  
 - Figure 3.3: CarotidCheck Entity-Relationship Diagram (ERD)  
@@ -168,7 +168,7 @@ This gives a total **estimated budget of USD $250**, while **actual spending dur
 
 ## 1.8 Research Timeline
 
-*See Figure 1.1: Project Gantt Chart and Research Timeline.*
+*See Figure 1.1: CarotidCheck 3-Month Research Project Gantt Chart (Janvier–Mars 2026).*
 # CHAPTER TWO: LITERATURE REVIEW
 
 ## 2.1 Introduction

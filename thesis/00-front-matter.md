@@ -16,7 +16,7 @@
 - Table 1.1: Estimated Research and Development Budget
 
 ### List of Figures
-- Figure 1.1: Project Gantt Chart and Research Timeline
+- Figure 1.1: CarotidCheck 3-Month Research Project Gantt Chart (Janvier–Mars 2026)
 - Figure 3.1: StrokeLink UML Class Diagram
 - Figure 3.2: Client-Server Architecture
 - Figure 3.3: StrokeLink Entity-Relationship Diagram (ERD)
