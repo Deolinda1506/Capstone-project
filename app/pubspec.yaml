@@ -48,6 +48,7 @@ dependencies:
 
   # UI & forms
   google_fonts: ^6.2.1
+  flutter_svg: ^2.0.10+1
   signature: ^5.4.1
   intl: ^0.20.2
 
@@ -55,6 +56,7 @@ dependencies:
   http: ^1.2.2
   http_parser: ^4.0.2
   connectivity_plus: ^6.0.5
+  path_provider: ^2.1.4
 
   # Africa's Talking SMS
   # (using http for direct API calls)
@@ -94,6 +96,9 @@ flutter:
 
   assets:
     - assets/logo.png
+    - assets/logo_carotid.png
+    - assets/logo_carotid.svg
+    - assets/logo_carotidcheck.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

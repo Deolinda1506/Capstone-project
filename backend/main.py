@@ -38,6 +38,18 @@ def _ensure_sqlite_columns():
         pass
     try:
         with engine.connect() as conn:
+            r = conn.execute(text("PRAGMA table_info(patients)"))
+            pat_cols = {row[1] for row in r}
+        if "name" not in pat_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE patients ADD COLUMN name VARCHAR(255)"))
+        if "age" not in pat_cols:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE patients ADD COLUMN age INTEGER"))
+    except Exception:
+        pass
+    try:
+        with engine.connect() as conn:
             r = conn.execute(text("PRAGMA table_info(results)"))
             res_cols = {row[1] for row in r}
         if "stenosis_pct" not in res_cols:

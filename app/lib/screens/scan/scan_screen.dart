@@ -34,18 +34,26 @@ class _ScanScreenState extends State<ScanScreen> {
     setState(() => _uploading = true);
     try {
       final patientEmail = widget.patient?.email;
+      final patientName = widget.patient?.name;
+      final patientAge = widget.patient?.age;
       if (patientId == null || patientId.isEmpty) {
         final createRes = await api.createPatient(
           identifier: null,
+          name: patientName,
+          age: patientAge,
           email: patientEmail,
           facility: 'Gasabo',
         );
         if (createRes.success && createRes.data != null) {
-          patientId = createRes.data!['identifier'] as String? ?? createRes.data!['id'] as String?;
+          patientId =
+              createRes.data!['identifier'] as String? ??
+              createRes.data!['id'] as String?;
         }
       } else {
         final createRes = await api.createPatient(
           identifier: patientId,
+          name: patientName,
+          age: patientAge,
           email: patientEmail,
           facility: 'Gasabo',
         );
@@ -54,9 +62,10 @@ class _ScanScreenState extends State<ScanScreen> {
         }
       }
       if (patientId == null) {
-        if (mounted) messenger.showSnackBar(
-          SnackBar(content: Text(context.l10n.t('couldNotCreatePatient'))),
-        );
+        if (mounted)
+          messenger.showSnackBar(
+            SnackBar(content: Text(context.l10n.t('couldNotCreatePatient'))),
+          );
         return;
       }
       final uploadRes = await api.uploadScan(
@@ -71,28 +80,34 @@ class _ScanScreenState extends State<ScanScreen> {
         final result = uploadRes.data!['result'] as Map<String, dynamic>?;
         final risk = (result?['risk_level'] as String? ?? 'low').toLowerCase();
         final imt = (result?['imt_mm'] as num?)?.toDouble() ?? 0.0;
-        final stenosisPct = (uploadRes.data!['stenosis_pct'] as num?)?.toDouble();
+        final stenosisPct = (uploadRes.data!['stenosis_pct'] as num?)
+            ?.toDouble();
         final stenosisSource = uploadRes.data!['stenosis_source'] as String?;
         final plaqueDetected = uploadRes.data!['plaque_detected'] as bool?;
-        final overlayBase64 = uploadRes.data!['segmentation_overlay_base64'] as String?;
-        final hasAiOverlay = uploadRes.data!['has_ai_overlay'] as bool? ?? false;
+        final overlayBase64 =
+            uploadRes.data!['segmentation_overlay_base64'] as String?;
+        final hasAiOverlay =
+            uploadRes.data!['has_ai_overlay'] as bool? ?? false;
         final patientAge = uploadRes.data!['patient_age'] as int?;
         final originalImageBase64 = overlayBase64 ?? base64Encode(_imageBytes!);
         if (mounted && scanId.isNotEmpty) {
-          context.push('/result/$scanId', extra: {
-            'risk': risk,
-            'imt': imt,
-            'stenosisPct': stenosisPct,
-            'stenosisSource': stenosisSource,
-            'plaqueDetected': plaqueDetected,
-            'patientName': widget.patient?.name,
-            'patientIdentifier': patientId,
-            'analyzedAt': DateTime.now().toIso8601String(),
-            'segmentationOverlayBase64': overlayBase64,
-            'originalImageBase64': originalImageBase64,
-            'hasAiOverlay': hasAiOverlay,
-            if (patientAge != null) 'patientAge': patientAge,
-          });
+          context.push(
+            '/result/$scanId',
+            extra: {
+              'risk': risk,
+              'imt': imt,
+              'stenosisPct': stenosisPct,
+              'stenosisSource': stenosisSource,
+              'plaqueDetected': plaqueDetected,
+              'patientName': widget.patient?.name,
+              'patientIdentifier': patientId,
+              'analyzedAt': DateTime.now().toIso8601String(),
+              'segmentationOverlayBase64': overlayBase64,
+              'originalImageBase64': originalImageBase64,
+              'hasAiOverlay': hasAiOverlay,
+              if (patientAge != null) 'patientAge': patientAge,
+            },
+          );
         } else if (mounted) {
           messenger.showSnackBar(
             SnackBar(content: Text(context.l10n.t('analysisFailed'))),
@@ -100,13 +115,16 @@ class _ScanScreenState extends State<ScanScreen> {
         }
       } else {
         messenger.showSnackBar(
-          SnackBar(content: Text(uploadRes.error ?? context.l10n.t('analysisFailed'))),
+          SnackBar(
+            content: Text(uploadRes.error ?? context.l10n.t('analysisFailed')),
+          ),
         );
       }
     } catch (e) {
-      if (mounted) messenger.showSnackBar(
-        SnackBar(content: Text('${context.l10n.t('error')}: $e')),
-      );
+      if (mounted)
+        messenger.showSnackBar(
+          SnackBar(content: Text('${context.l10n.t('error')}: $e')),
+        );
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -114,10 +132,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final xfile = await picker.pickImage(
-      source: source,
-      imageQuality: 85,
-    );
+    final xfile = await picker.pickImage(source: source, imageQuality: 85);
     if (xfile != null) {
       final bytes = await xfile.readAsBytes();
       if (mounted) {
@@ -157,7 +172,9 @@ class _ScanScreenState extends State<ScanScreen> {
                       ],
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.15)),
+                    border: Border.all(
+                      color: AppTheme.primaryBlue.withOpacity(0.15),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -167,7 +184,11 @@ class _ScanScreenState extends State<ScanScreen> {
                           color: AppTheme.primaryBlue.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.person_outline, color: AppTheme.primaryBlue, size: 24),
+                        child: const Icon(
+                          Icons.person_outline,
+                          color: AppTheme.primaryBlue,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -185,11 +206,16 @@ class _ScanScreenState extends State<ScanScreen> {
                               ),
                             Text(
                               widget.patient!.name ?? 'Patient',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             Text(
                               '${widget.patient!.age} yrs • ${widget.patient!.gender}',
-                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
@@ -201,16 +227,16 @@ class _ScanScreenState extends State<ScanScreen> {
               ],
               Text(
                 context.l10n.t('captureCarotidImage'),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               Text(
                 context.l10n.t('captureCarotidImageDesc'),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
               ),
               const SizedBox(height: 12),
               Container(
@@ -218,20 +244,26 @@ class _ScanScreenState extends State<ScanScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.accentTeal.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.accentTeal.withOpacity(0.2)),
+                  border: Border.all(
+                    color: AppTheme.accentTeal.withOpacity(0.2),
+                  ),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.tips_and_updates_outlined, color: AppTheme.accentTeal, size: 22),
+                    Icon(
+                      Icons.tips_and_updates_outlined,
+                      color: AppTheme.accentTeal,
+                      size: 22,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         context.l10n.t('scanInstructions'),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.accentTeal,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          color: AppTheme.accentTeal,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -261,12 +293,18 @@ class _ScanScreenState extends State<ScanScreen> {
                       ],
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.accentTeal.withOpacity(0.2)),
+                    border: Border.all(
+                      color: AppTheme.accentTeal.withOpacity(0.2),
+                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.monitor_heart, size: 56, color: AppTheme.accentTeal.withOpacity(0.7)),
+                      Icon(
+                        Icons.monitor_heart,
+                        size: 56,
+                        color: AppTheme.accentTeal.withOpacity(0.7),
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         context.l10n.t('noImageCaptured'),

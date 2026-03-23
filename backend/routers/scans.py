@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -162,6 +163,7 @@ async def upload_scan_image(
 @router.get("/with-results")
 def list_scans_with_results(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    name: Annotated[str | None, Query(description="Filter by patient name")] = None,
     db: Annotated[Session, Depends(get_db)] = ...,
     current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
@@ -175,12 +177,21 @@ def list_scans_with_results(
     role = (current_user.role or "chw").lower()
     if role == "chw":
         q = q.filter(Patient.user_id == current_user.id)
+    if name and (n := name.strip()):
+        q = q.filter(
+            or_(
+                Patient.name.ilike(f"%{n}%"),
+                Patient.identifier.ilike(f"%{n}%"),
+            )
+        )
     rows = q.order_by(Result.created_at.desc()).limit(limit).all()
     return [
         {
             "scan_id": s.id,
             "patient_id": p.id,
             "patient_identifier": p.identifier,
+            "patient_name": p.name,
+            "patient_age": p.age,
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "imt_mm": r.imt_mm,
             "risk_level": r.risk_level,
@@ -197,12 +208,14 @@ def list_scans_with_results(
 @router.get("/high-risk")
 def list_high_risk_referrals(
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    name: Annotated[str | None, Query(description="Filter by patient name (case-insensitive)")] = None,
     db: Annotated[Session, Depends(get_db)] = ...,
     current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
     """
     List high-risk scans for hospital dashboard.
     Clinicians and admins see all high-risk referrals; CHWs see only their own.
+    Optional name filter for clinician verification (patient says their name).
     """
     q = (
         db.query(Scan, Result, Patient)
@@ -213,6 +226,13 @@ def list_high_risk_referrals(
     role = (current_user.role or "chw").lower()
     if role == "chw":
         q = q.filter(Patient.user_id == current_user.id)
+    if name and (n := name.strip()):
+        q = q.filter(
+            or_(
+                Patient.name.ilike(f"%{n}%"),
+                Patient.identifier.ilike(f"%{n}%"),
+            )
+        )
     q = q.order_by(Result.created_at.desc()).limit(limit)
     rows = q.all()
     return [
@@ -220,6 +240,8 @@ def list_high_risk_referrals(
             "scan_id": s.id,
             "patient_id": p.id,
             "patient_identifier": p.identifier,
+            "patient_name": p.name,
+            "patient_age": p.age,
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "imt_mm": r.imt_mm,
             "risk_level": r.risk_level,
@@ -259,6 +281,8 @@ def get_scan_result(
         "scan_id": scan.id,
         "patient_id": patient.id,
         "patient_identifier": patient.identifier,
+        "patient_name": patient.name,
+        "patient_age": patient.age,
         "created_at": r.created_at.isoformat() if r.created_at else None,
         "imt_mm": r.imt_mm,
         "risk_level": r.risk_level,

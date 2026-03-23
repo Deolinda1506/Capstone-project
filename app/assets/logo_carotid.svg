@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" fill="none">
+  <defs>
+    <linearGradient id="vessel" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#0D47A1"/>
+      <stop offset="100%" stop-color="#0D47A1"/>
+    </linearGradient>
+  </defs>
+  <!-- Carotid artery silhouette: common carotid stem + bifurcation -->
+  <!-- Stem (common carotid) -->
+  <path d="M50 115 Q48 80 50 50 Q52 30 50 22" 
+        stroke="url(#vessel)" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <!-- Internal carotid (vertical branch) -->
+  <path d="M50 22 Q48 12 50 2" 
+        stroke="url(#vessel)" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <!-- External carotid (angled branch) -->
+  <path d="M50 22 Q62 16 85 5" 
+        stroke="url(#vessel)" stroke-width="8" stroke-linecap="round" fill="none"/>
+  <!-- Carotid bulb (dilation at bifurcation) -->
+  <circle cx="50" cy="22" r="6" fill="url(#vessel)"/>
+</svg>

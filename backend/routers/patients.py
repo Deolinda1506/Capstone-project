@@ -44,6 +44,8 @@ def create_patient(
         id=str(uuid4()),
         user_id=current_user.id,
         identifier=identifier,
+        name=body.name.strip() if body.name else None,
+        age=body.age,
         email=body.email.strip() if body.email else None,
         facility=body.facility,
     )

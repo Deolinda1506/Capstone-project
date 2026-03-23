@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from backend.database import Base
@@ -10,7 +10,9 @@ class Patient(Base):
 
     id = Column(String(36), primary_key=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
-    identifier = Column(String(255), nullable=False)  # Unique patient ID (displayed to patient)
+    identifier = Column(String(255), nullable=False)  # Unique patient ID
+    name = Column(String(255), nullable=True)  # Patient name (for clinician verification)
+    age = Column(Integer, nullable=True)  # Patient age in years (for clinician verification)
     email = Column(String(255), nullable=True)  # For welcome and referral emails
     facility = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
