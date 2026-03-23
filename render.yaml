@@ -12,7 +12,9 @@ services:
     plan: free
     # If repo root is parent of "CarotidCheck app", set rootDir in Render Dashboard → Service → Settings → Root Directory: "CarotidCheck app"
 
-    buildCommand: pip install -r backend/requirements-api.txt
+    # Full stack: TensorFlow + OpenCV for Attention U-Net on /scans/upload (needs ML/AttentionUNet.keras + ML/model_layers.py in repo).
+    # Free tier may OOM or hit disk limits; upgrade instance if build/runtime fails.
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
 
     envVars:

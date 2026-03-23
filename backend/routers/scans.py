@@ -120,8 +120,20 @@ async def upload_scan_image(
             patient_age=patient_age,
         )
         latency_tracker.record_inference_latency(pred.get("inference_time_sec", time.perf_counter() - t_start))
-    except ImportError as e:
-        logger.warning("ML model not available (%s). Using demo fallback.", e)
+    except Exception as e:
+        err = str(e).lower()
+        ml_unavailable = (
+            isinstance(e, (ImportError, ModuleNotFoundError, FileNotFoundError, OSError))
+            or "model not found" in err
+            or "attentionunet.keras" in err
+            or "tensorflow" in err
+        )
+        if not ml_unavailable:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Prediction failed: {str(e)}",
+            )
+        logger.warning("ML model/runtime unavailable (%s). Using demo fallback.", e)
         h = int(hashlib.sha256(contents[:1024]).hexdigest()[:8], 16)
         imt_mm = round(0.5 + (h % 15) / 10, 2)  # Demo: 0.5–1.9 mm (spans Low/Moderate/High)
         stenosis_pct = (1 - imt_mm / 1.5) * 80 if imt_mm < 1.5 else min(99, 70 + (imt_mm - 1.2) * 20)
@@ -141,8 +153,6 @@ async def upload_scan_image(
             "has_ai_overlay": False,
         }
         latency_tracker.record_inference_latency(pred["inference_time_sec"])
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Prediction failed: {str(e)}")
     scan_id = str(uuid4())
     image_path = _save_scan_image(
         scan_id,

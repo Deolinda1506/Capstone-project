@@ -1,5 +1,5 @@
-# Carotid segmentation (Attention U-Net inference)
-tensorflow>=2.15.0
+# Carotid segmentation (Attention U-Net inference). Model saved with Keras 3.13 — use TF that bundles compatible Keras 3.
+tensorflow>=2.16.0
 numpy>=1.24.0
 opencv-python-headless>=4.8.0
 

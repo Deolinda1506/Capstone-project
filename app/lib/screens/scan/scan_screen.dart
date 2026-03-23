@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -26,6 +27,12 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   Uint8List? _imageBytes;
   bool _uploading = false;
+
+  bool get _isDesktop =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.macOS ||
+          defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux);
 
   Future<void> _warmUpBackend(AuthService auth) async {
     // Render free instances can sleep; first request may fail at edge and appear
@@ -218,27 +225,50 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     XFile? xfile;
-    if (source == ImageSource.gallery) {
-      // On desktop/simulator, use system file picker so user can choose Downloads.
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        withData: true,
-        allowMultiple: false,
-      );
-      final picked = result?.files.single.bytes;
-      if (picked != null && mounted) {
-        setState(() => _imageBytes = picked);
+    try {
+      if (source == ImageSource.gallery || _isDesktop) {
+        if (_isDesktop && source == ImageSource.camera && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Camera is unavailable on desktop. Opening file picker instead.',
+              ),
+            ),
+          );
+        }
+
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          withData: true,
+          allowMultiple: false,
+        );
+
+        final file = result?.files.single;
+        if (file == null) return;
+
+        final path = file.path;
+        final bytes =
+            file.bytes ??
+            (path != null ? await XFile(path).readAsBytes() : null);
+        if (bytes == null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Could not read selected image.')),
+            );
+          }
+          return;
+        }
+        if (mounted) setState(() => _imageBytes = bytes);
         return;
       }
-    }
-    try {
+
       xfile = await picker.pickImage(
         source: source,
         imageQuality: 85,
         // Helps on mobile browsers that support camera capture; ignored on gallery.
         preferredCameraDevice: CameraDevice.rear,
       );
-    } catch (_) {
+    } catch (e) {
       // iOS simulators and some environments do not expose a camera.
       if (source == ImageSource.camera) {
         if (mounted) {
@@ -248,7 +278,14 @@ class _ScanScreenState extends State<ScanScreen> {
             ),
           );
         }
-        xfile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+        xfile = await picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 85,
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open image picker: $e')),
+        );
       }
     }
     if (xfile != null) {
