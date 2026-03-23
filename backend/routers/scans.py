@@ -73,6 +73,13 @@ async def upload_scan_image(
     patient_id: Annotated[str, Form(description="Patient UUID or display identifier (e.g. CC-0001). Create patient via POST /patients first if needed.")],
     file: Annotated[UploadFile, File(description="Carotid ultrasound image")],
     patient_age: Annotated[int | None, Form(description="Optional patient age (years). When provided, age-specific IMT thresholds are used.")] = None,
+    pixel_spacing_mm: Annotated[
+        float | None,
+        Form(
+            description="Optional ultrasound pixel spacing (mm/pixel). "
+            "Use this when device metadata is available for better IMT calibration."
+        ),
+    ] = None,
     db: Annotated[Session, Depends(get_db)] = ...,
     current_user: Annotated[User, Depends(get_current_user_or_dev)] = ...,
 ):
@@ -98,10 +105,20 @@ async def upload_scan_image(
     if not patient:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Patient not found")
     contents = await file.read()
+    if pixel_spacing_mm is not None and (pixel_spacing_mm <= 0 or pixel_spacing_mm > 1):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="pixel_spacing_mm must be > 0 and <= 1 (mm/pixel).",
+        )
     t_start = time.perf_counter()
     try:
         from backend.inference import predict_imt
-        pred = predict_imt(contents, return_segmentation_overlay=True, patient_age=patient_age)
+        pred = predict_imt(
+            contents,
+            spacing_mm_per_pixel=pixel_spacing_mm if pixel_spacing_mm is not None else 0.04,
+            return_segmentation_overlay=True,
+            patient_age=patient_age,
+        )
         latency_tracker.record_inference_latency(pred.get("inference_time_sec", time.perf_counter() - t_start))
     except ImportError as e:
         logger.warning("ML model not available (%s). Using demo fallback.", e)
@@ -118,6 +135,8 @@ async def upload_scan_image(
             "stenosis_pct": round(stenosis_pct, 1),
             "stenosis_source": "imt_correlation",  # Demo has no segmentation
             "inference_time_sec": round(time.perf_counter() - t_start, 3),
+            "pixel_spacing_mm": float(pixel_spacing_mm if pixel_spacing_mm is not None else 0.04),
+            "pixel_spacing_source": "metadata" if pixel_spacing_mm is not None else "default",
             "segmentation_overlay_base64": base64.b64encode(contents).decode("ascii"),
             "has_ai_overlay": False,
         }
@@ -177,6 +196,8 @@ async def upload_scan_image(
         stenosis_source=pred.get("stenosis_source"),
         inference_time_sec=pred.get("inference_time_sec"),
         patient_age=patient_age,
+        pixel_spacing_mm=pred.get("pixel_spacing_mm"),
+        pixel_spacing_source=pred.get("pixel_spacing_source"),
     )
 
 

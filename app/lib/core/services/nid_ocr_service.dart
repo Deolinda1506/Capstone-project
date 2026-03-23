@@ -36,35 +36,53 @@ class NidOcrService {
     String? gender;
     String? nationalId;
 
-    // Rwanda NID format: typically has names in first lines, ID number, DOB
-    // Heuristic: longest line with letters only (or with spaces) = name
+    const ignoredNameTokens = <String>{
+      'republic of rwanda',
+      'national id',
+      'identity card',
+      'id card',
+      'card',
+      'sex',
+      'gender',
+      'date of birth',
+      'dob',
+      'issued',
+      'expires',
+    };
+
+    // Rwanda NID format varies by issue version and OCR quality.
+    // Heuristics below intentionally tolerate noisy punctuation and spacing.
     for (final line in lines) {
-      final cleaned = line.replaceAll(RegExp(r'[^\w\s\-]'), '');
+      final cleaned = line.replaceAll(RegExp(r'[^A-Za-z0-9\s\-]'), '').trim();
+      final lowerCleaned = cleaned.toLowerCase();
       if (cleaned.length > 10 &&
           RegExp(r'^[A-Za-z\s\-]+$').hasMatch(cleaned) &&
-          !RegExp(r'^\d+$').hasMatch(cleaned)) {
+          !RegExp(r'^\d+$').hasMatch(cleaned) &&
+          !ignoredNameTokens.any(lowerCleaned.contains)) {
         if (name == null || cleaned.length > name.length) {
-          name = line.trim();
+          name = cleaned.replaceAll(RegExp(r'\s+'), ' ');
         }
       }
-      // ID number: 16 digits or similar
-      final idMatch = RegExp(r'\b\d{12,20}\b').firstMatch(line);
+      // ID number: commonly 16 digits (accept a broader range for OCR noise).
+      final idMatch = RegExp(r'\b\d{12,20}\b').firstMatch(cleaned);
       if (idMatch != null && nationalId == null) {
         nationalId = idMatch.group(0);
       }
-      // DOB: DD/MM/YYYY or similar
-      final dobMatch = RegExp(r'(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})').firstMatch(line);
+      // DOB: DD/MM/YYYY or similar.
+      final dobMatch = RegExp(r'(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{2,4})').firstMatch(cleaned);
       if (dobMatch != null && age == null) {
         final yearVal = dobMatch.group(3);
         final year = yearVal != null ? int.tryParse(yearVal) : null;
         if (year != null) {
-          final y = year > 50 ? 1900 + year : 2000 + year;
+          final y = yearVal!.length == 2
+              ? (year >= 50 ? 1900 + year : 2000 + year)
+              : year;
           age = DateTime.now().year - y;
           if (age < 0 || age > 120) age = null;
         }
       }
       // Gender: M/F or Male/Female
-      final lower = line.toLowerCase();
+      final lower = lowerCleaned;
       if (gender == null) {
         if (lower.contains('male') && !lower.contains('female')) gender = 'Male';
         if (lower.contains('female')) gender = 'Female';

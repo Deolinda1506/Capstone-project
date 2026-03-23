@@ -4,7 +4,7 @@ import 'package:signature/signature.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/models/patient_model.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/app_logo.dart';
+import '../../core/widgets/app_page_appbar.dart';
 import '../../core/widgets/responsive_layout.dart';
 
 class PatientConsentScreen extends StatefulWidget {
@@ -34,12 +34,10 @@ class _PatientConsentScreenState extends State<PatientConsentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: AppLogo.titleWithLogo(context, context.l10n.t('patientConsent')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+      appBar: appPageAppBar(
+        context,
+        title: context.l10n.t('patientConsent'),
+        fallbackPath: '/patient/capture',
       ),
       body: SafeArea(
         child: SingleChildScrollView(

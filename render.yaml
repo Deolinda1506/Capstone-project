@@ -30,6 +30,12 @@ services:
       # Default From: checkcarid@gmail.com — set SMTP_* in Render Dashboard (secrets) to enable sending.
       - key: EMAIL_FROM
         value: checkcarid@gmail.com
+      # Reliable SMS/email retries via DB queue worker (safe even when SMTP/SMS not configured;
+      # the services will simply no-op when disabled).
+      - key: ALERT_QUEUE_ENABLED
+        value: "1"
+      - key: ALERT_QUEUE_POLL_SECONDS
+        value: "5"
 
   # Clinician web dashboard (Vite/React SPA → CDN). Build bakes in VITE_API_URL.
   - type: web

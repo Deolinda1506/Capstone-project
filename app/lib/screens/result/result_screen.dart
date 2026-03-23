@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/app_logo.dart';
+import '../../core/widgets/app_page_appbar.dart';
 import '../../core/widgets/responsive_layout.dart';
 
 class ResultScreen extends StatefulWidget {
@@ -161,9 +161,10 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
   Widget build(BuildContext context) {
     if (_loading && _data == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: AppLogo.titleWithLogo(context, context.l10n.t('analysisResult')),
-          leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
+        appBar: appPageAppBar(
+          context,
+          title: context.l10n.t('analysisResult'),
+          fallbackPath: '/analyses',
         ),
         body: Center(
           child: Column(
@@ -179,9 +180,10 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
     }
     if (_error != null && _data == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: AppLogo.titleWithLogo(context, context.l10n.t('analysisResult')),
-          leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => context.pop()),
+        appBar: appPageAppBar(
+          context,
+          title: context.l10n.t('analysisResult'),
+          fallbackPath: '/analyses',
         ),
         body: Center(
           child: Padding(
@@ -216,12 +218,10 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
         ? DateFormat('MMM d, y • HH:mm').format(DateTime.parse(analyzedAt))
         : null;
     return Scaffold(
-      appBar: AppBar(
-        title: AppLogo.titleWithLogo(context, context.l10n.t('analysisResult')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+      appBar: appPageAppBar(
+        context,
+        title: context.l10n.t('analysisResult'),
+        fallbackPath: '/analyses',
       ),
       body: SafeArea(
         child: SingleChildScrollView(

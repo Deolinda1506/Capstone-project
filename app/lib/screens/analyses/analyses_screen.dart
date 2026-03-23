@@ -122,6 +122,11 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
         leading: navBackButton(context),
         actions: [
           IconButton(
+            icon: const Icon(Icons.camera_alt),
+            tooltip: context.l10n.t('camera'),
+            onPressed: () => context.push('/scan'),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loading ? null : _load,
           ),

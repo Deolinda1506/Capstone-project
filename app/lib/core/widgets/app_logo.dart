@@ -13,12 +13,17 @@ class AppLogo extends StatelessWidget {
     this.color,
   });
 
-  static Widget titleWithLogo(BuildContext context, String text, {double logoHeight = 36}) {
+  static Widget titleWithLogo(
+    BuildContext context,
+    String text, {
+    double logoHeight = 36,
+    double spacing = 10,
+  }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         AppLogo(height: logoHeight, showInAppBar: true, color: Colors.white),
-        const SizedBox(width: 8),
+        SizedBox(width: spacing),
         Flexible(
           child: Text(
             text,

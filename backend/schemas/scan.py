@@ -49,6 +49,8 @@ class ScanUploadResponse(BaseModel):
     stenosis_source: str | None = None  # "nascet" = lumen-based (both walls); "imt_correlation" = estimated
     inference_time_sec: float | None = None  # Latency of AI inference (seconds)
     patient_age: int | None = None  # When provided, age-specific IMT thresholds were applied
+    pixel_spacing_mm: float | None = None  # Actual mm/pixel used for IMT calibration
+    pixel_spacing_source: str | None = None  # "metadata" when provided, else "default"
 
 
 class ClinicianReviewUpdate(BaseModel):

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/district_constants.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/widgets/app_logo.dart';
+import '../../core/widgets/app_page_appbar.dart';
 import '../../core/widgets/responsive_layout.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -117,14 +118,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final authService = context.watch<AuthService>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Builder(
-          builder: (context) => AppLogo.titleWithLogo(context, context.l10n.t('register')),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+      appBar: appPageAppBar(
+        context,
+        title: context.l10n.t('register'),
+        fallbackPath: '/login',
       ),
       body: SafeArea(
         child: SingleChildScrollView(

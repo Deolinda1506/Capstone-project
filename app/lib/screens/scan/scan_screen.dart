@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ import '../../core/l10n/l10n_extension.dart';
 import '../../core/models/patient_model.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/app_logo.dart';
+import '../../core/widgets/app_page_appbar.dart';
 import '../../core/widgets/responsive_layout.dart';
 
 // Carotid scan capture + upload. Uses Image.memory on web (Image.file not supported).
@@ -25,6 +26,16 @@ class _ScanScreenState extends State<ScanScreen> {
   Uint8List? _imageBytes;
   bool _uploading = false;
 
+  Future<void> _warmUpBackend(AuthService auth) async {
+    // Render free instances can sleep; first request may fail at edge and appear
+    // as a browser CORS/network error. Warm up health endpoint before upload.
+    for (var i = 0; i < 2; i++) {
+      final res = await auth.api.health();
+      if (res.success) return;
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+  }
+
   Future<void> _analyze(BuildContext context) async {
     final auth = context.read<AuthService>();
     final api = auth.api;
@@ -33,6 +44,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
     setState(() => _uploading = true);
     try {
+      await _warmUpBackend(auth);
       final patientEmail = widget.patient?.email;
       final patientName = widget.patient?.name;
       final patientAge = widget.patient?.age;
@@ -68,11 +80,22 @@ class _ScanScreenState extends State<ScanScreen> {
           );
         return;
       }
-      final uploadRes = await api.uploadScan(
+      var uploadRes = await api.uploadScan(
         patientId,
         _imageBytes!,
         patientAge: widget.patient?.age,
       );
+      // Retry once for transient web transport/cold-start failures.
+      if (!uploadRes.success &&
+          (uploadRes.error?.contains('XMLHttpRequest error') == true ||
+              uploadRes.error?.contains('Failed to fetch') == true)) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        uploadRes = await api.uploadScan(
+          patientId,
+          _imageBytes!,
+          patientAge: widget.patient?.age,
+        );
+      }
       if (!mounted) return;
       if (uploadRes.success && uploadRes.data != null) {
         final scan = uploadRes.data!['scan'] as Map<String, dynamic>?;
@@ -114,9 +137,13 @@ class _ScanScreenState extends State<ScanScreen> {
           );
         }
       } else {
+        final err = uploadRes.error ?? context.l10n.t('analysisFailed');
+        final status = uploadRes.statusCode;
         messenger.showSnackBar(
           SnackBar(
-            content: Text(uploadRes.error ?? context.l10n.t('analysisFailed')),
+            content: Text(
+              _friendlyUploadErrorMessage(err, status),
+            ),
           ),
         );
       }
@@ -130,9 +157,40 @@ class _ScanScreenState extends State<ScanScreen> {
     }
   }
 
+  String _friendlyUploadErrorMessage(String err, int? statusCode) {
+    if (err.contains('XMLHttpRequest error') || err.contains('Failed to fetch')) {
+      return 'Upload failed to reach server (possible Render cold start). Please wait 20-30s and retry.';
+    }
+    if (err.toLowerCase().contains('timed out')) {
+      return 'Upload took too long. Please retry with a clearer/smaller image.';
+    }
+    switch (statusCode) {
+      case 400:
+        return 'The image could not be processed. Please capture the carotid scan again.';
+      case 401:
+        return 'Your session expired. Please log in again.';
+      case 403:
+        return 'You do not have permission to upload for this patient.';
+      case 404:
+        return 'Patient was not found. Please create/select the patient again.';
+      case 413:
+        return 'Image is too large. Please use a smaller image and retry.';
+      case 500:
+      case 503:
+        return 'Server could not analyze the image right now. Please try again shortly.';
+      default:
+        return err;
+    }
+  }
+
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
-    final xfile = await picker.pickImage(source: source, imageQuality: 85);
+    final xfile = await picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      // Helps on mobile browsers that support camera capture; ignored on gallery.
+      preferredCameraDevice: CameraDevice.rear,
+    );
     if (xfile != null) {
       final bytes = await xfile.readAsBytes();
       if (mounted) {
@@ -146,12 +204,11 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: AppLogo.titleWithLogo(context, context.l10n.t('carotidScan')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+      appBar: appPageAppBar(
+        context,
+        title: context.l10n.t('carotidScan'),
+        fallbackPath: '/patient/capture',
+        titleSpacing: 14,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -248,25 +305,12 @@ class _ScanScreenState extends State<ScanScreen> {
                     color: AppTheme.accentTeal.withOpacity(0.2),
                   ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.tips_and_updates_outlined,
-                      color: AppTheme.accentTeal,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        context.l10n.t('scanInstructions'),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.accentTeal,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  context.l10n.t('scanInstructions'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.accentTeal,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

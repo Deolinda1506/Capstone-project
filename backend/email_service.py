@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import logging
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -48,30 +49,51 @@ def _send(to: str, subject: str, body_text: str, body_html: str | None = None) -
     _init()
     if not _EMAIL_ENABLED or not to or "@" not in to:
         return False
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = _EMAIL_FROM
-        msg["To"] = to
-        msg.attach(MIMEText(body_text, "plain"))
-        if body_html:
-            msg.attach(MIMEText(body_html, "html"))
-        with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT) as server:
-            server.starttls()
-            server.login(_SMTP_USER, _SMTP_PASS)
-            server.sendmail(_EMAIL_FROM, [to], msg.as_string())
-        logger.info("Email sent to %s: %s", to, subject)
-        return True
-    except Exception as e:
-        logger.exception("Failed to send email: %s", e)
-        return False
+    for attempt in range(1, 4):
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = subject
+            msg["From"] = _EMAIL_FROM
+            msg["To"] = to
+            msg.attach(MIMEText(body_text, "plain"))
+            if body_html:
+                msg.attach(MIMEText(body_html, "html"))
+            with smtplib.SMTP(_SMTP_HOST, _SMTP_PORT, timeout=20) as server:
+                server.starttls()
+                server.login(_SMTP_USER, _SMTP_PASS)
+                server.sendmail(_EMAIL_FROM, [to], msg.as_string())
+            logger.info("Email sent to %s (attempt %d): %s", to, attempt, subject)
+            return True
+        except Exception as e:
+            if attempt == 3:
+                logger.exception("Failed to send email after retries: %s", e)
+                return False
+            time.sleep(0.6 * attempt)
+    return False
 
 
 def send_welcome_email(patient) -> None:
-    """
-    Send welcome email to patient when they are first registered.
-    Includes their unique patient ID (identifier).
-    """
+    """Enqueue (or send) welcome email to a patient."""
+    _init()
+    if not _EMAIL_ENABLED:
+        return
+
+    try:
+        from backend.alert_queue import is_enabled as _aq_enabled, enqueue_alert as _enqueue
+
+        if _aq_enabled():
+            patient_id = getattr(patient, "id", None)
+            if patient_id and _enqueue("email_welcome", {"patient_id": str(patient_id)}):
+                logger.info("Enqueued email_welcome for patient_id=%s", patient_id)
+                return
+    except Exception:
+        logger.exception("Queue enqueue failed for email_welcome; falling back to direct sending.")
+
+    send_welcome_email_direct(patient)
+
+
+def send_welcome_email_direct(patient) -> None:
+    """Send welcome email (direct, no queue)."""
     email = getattr(patient, "email", None) if patient else None
     if not email or not isinstance(email, str) or "@" not in email:
         return
@@ -94,8 +116,30 @@ def send_password_reset_email(to_email: str, reset_link_or_token: str) -> bool:
     (e.g. https://yourapp.com/reset-password?token=...) or a token to copy.
     Returns True if sent, False if email disabled or send failed.
     """
+    _init()
+    if not _EMAIL_ENABLED:
+        return False
     if not to_email or "@" not in to_email:
         return False
+
+    try:
+        from backend.alert_queue import is_enabled as _aq_enabled, enqueue_alert as _enqueue
+
+        if _aq_enabled():
+            if _enqueue(
+                "email_password_reset",
+                {"email": to_email, "reset_link_or_token": reset_link_or_token},
+            ):
+                logger.info("Enqueued email_password_reset for %s", to_email)
+                return True
+    except Exception:
+        logger.exception("Queue enqueue failed for password reset; falling back to direct sending.")
+
+    return send_password_reset_email_direct(to_email, reset_link_or_token)
+
+
+def send_password_reset_email_direct(to_email: str, reset_link_or_token: str) -> bool:
+    """Send password reset email (direct, no queue)."""
     subject = "CarotidCheck – Reset your password"
     text = (
         f"Hello,\n\n"
@@ -113,8 +157,27 @@ def send_chw_id_email(to_email: str, staff_id: str) -> bool:
     Send CHW their unique ID via email after registration.
     Returns True if sent, False if email disabled or send failed.
     """
+    _init()
+    if not _EMAIL_ENABLED:
+        return False
     if not to_email or "@" not in to_email:
         return False
+
+    try:
+        from backend.alert_queue import is_enabled as _aq_enabled, enqueue_alert as _enqueue
+
+        if _aq_enabled():
+            if _enqueue("email_chw_id", {"email": to_email, "staff_id": staff_id}):
+                logger.info("Enqueued email_chw_id for %s", to_email)
+                return True
+    except Exception:
+        logger.exception("Queue enqueue failed for CHW ID email; falling back to direct sending.")
+
+    return send_chw_id_email_direct(to_email, staff_id)
+
+
+def send_chw_id_email_direct(to_email: str, staff_id: str) -> bool:
+    """Send CHW ID email (direct, no queue)."""
     subject = "CarotidCheck – Your Login ID"
     text = (
         f"Hello,\n\n"
@@ -131,6 +194,29 @@ def send_referral_email(patient, imt_mm: float, risk_level: str) -> None:
     """
     Send email to patient when they are referred to hospital (high-risk result).
     """
+    _init()
+    if not _EMAIL_ENABLED:
+        return
+
+    try:
+        from backend.alert_queue import is_enabled as _aq_enabled, enqueue_alert as _enqueue
+
+        if _aq_enabled():
+            patient_id = getattr(patient, "id", None)
+            if patient_id and _enqueue(
+                "email_referral",
+                {"patient_id": str(patient_id), "imt_mm": imt_mm, "risk_level": risk_level},
+            ):
+                logger.info("Enqueued email_referral for patient_id=%s", patient_id)
+                return
+    except Exception:
+        logger.exception("Queue enqueue failed for referral email; falling back to direct sending.")
+
+    send_referral_email_direct(patient, imt_mm, risk_level)
+
+
+def send_referral_email_direct(patient, imt_mm: float, risk_level: str) -> None:
+    """Send referral email (direct, no queue)."""
     email = getattr(patient, "email", None) if patient else None
     if not email or not isinstance(email, str) or "@" not in email:
         return

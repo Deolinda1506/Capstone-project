@@ -1,6 +1,9 @@
 """FastAPI app: SQLAlchemy · Pydantic v2 · JWT · Attention U-Net. SQLite (dev) / PostgreSQL (prod)."""
 import logging
 import os
+import asyncio
+import time
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,6 +16,9 @@ from starlette.requests import Request
 from backend.database import engine, Base
 import backend.models  # noqa: F401 — register models
 from backend.routers import auth, patients, scans
+from backend.routers import admin_alerts
+from backend import observability
+from backend import alert_queue
 
 def _ensure_sqlite_columns():
     """Add missing columns to existing SQLite tables (e.g. after model changes)."""
@@ -229,8 +235,24 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         import logging
         logging.getLogger(__name__).warning("Could not preload ML model: %s. First scan may be slow.", e)
+
+    worker_task = None
+    if alert_queue.is_enabled():
+        logger_ = logging.getLogger(__name__)
+
+        async def _alert_worker():
+            while True:
+                try:
+                    await asyncio.to_thread(alert_queue.process_due_alerts)
+                except Exception:
+                    logger_.exception("Alert queue worker failed (non-fatal)")
+                await asyncio.sleep(alert_queue.ALERT_QUEUE_POLL_SECONDS)
+
+        worker_task = asyncio.create_task(_alert_worker())
     yield
     # shutdown if needed
+    if worker_task:
+        worker_task.cancel()
 
 
 app = FastAPI(
@@ -239,9 +261,20 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+def _cors_origins() -> list[str]:
+    """Parse CORS_ORIGINS env (comma-separated); fallback keeps local dev easy."""
+    raw = os.getenv("CORS_ORIGINS", "").strip()
+    if raw:
+        origins = [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
+        return origins or ["*"]
+    return ["*"]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins(),
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -251,8 +284,24 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(patients.router)
 app.include_router(scans.router)
+app.include_router(admin_alerts.router)
 
 _log = logging.getLogger(__name__)
+
+@app.middleware("http")
+async def _request_observability_middleware(request: Request, call_next):
+    req_id = request.headers.get("X-Request-Id", str(uuid.uuid4()))
+    t0 = time.perf_counter()
+    try:
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        response.headers["X-Request-Id"] = req_id
+        observability.record_request(request.url.path, response.status_code, elapsed_ms)
+        return response
+    except Exception:
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        observability.record_request(request.url.path, 500, elapsed_ms)
+        raise
 
 
 @app.exception_handler(ResponseValidationError)
@@ -370,3 +419,9 @@ def latency():
     """
     from backend.latency import get_latency_stats
     return get_latency_stats()
+
+
+@app.get("/metrics")
+def metrics():
+    """In-process JSON metrics for basic production monitoring."""
+    return observability.snapshot()

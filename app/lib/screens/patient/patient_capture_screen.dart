@@ -6,6 +6,7 @@ import '../../core/models/patient_model.dart';
 import '../../core/services/patient_id_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_logo.dart';
+import '../../core/widgets/app_page_appbar.dart';
 import '../../core/widgets/responsive_layout.dart';
 import 'patient_consent_screen.dart';
 import 'patient_scan_io.dart' if (dart.library.html) 'patient_scan_web.dart' as scan;
@@ -70,12 +71,10 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: AppLogo.titleWithLogo(context, context.l10n.t('newPatient')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+      appBar: appPageAppBar(
+        context,
+        title: context.l10n.t('newPatient'),
+        fallbackPath: '/',
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -116,7 +115,7 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
                 ),
                 const SizedBox(height: 24),
                 TextFormField(
-                  key: ValueKey(_name),
+                  key: ValueKey('name_${_name ?? ''}'),
                   initialValue: _name,
                   decoration: InputDecoration(
                     labelText: context.l10n.t('fullName'),
@@ -127,7 +126,7 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  key: ValueKey(_age),
+                  key: ValueKey('age_${_age?.toString() ?? ''}'),
                   initialValue: _age?.toString(),
                   decoration: InputDecoration(
                     labelText: context.l10n.t('age'),
@@ -144,7 +143,7 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _gender,
+                  initialValue: _gender,
                   decoration: InputDecoration(labelText: context.l10n.t('gender')),
                   items: [
                     DropdownMenuItem(value: 'Male', child: Text(context.l10n.t('male'))),
@@ -156,7 +155,7 @@ class _PatientCaptureScreenState extends State<PatientCaptureScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
-                  key: ValueKey(_email),
+                  key: ValueKey('email_${_email ?? ''}'),
                   initialValue: _email,
                   decoration: InputDecoration(
                     labelText: context.l10n.t('emailOptional'),

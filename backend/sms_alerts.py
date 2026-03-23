@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +43,40 @@ def notify_high_risk(
     imt_mm: float,
     risk_level: str,
 ) -> None:
-    """
-    Send SMS to configured clinician numbers when a high-risk result is saved.
-    Safe to call even when SMS is disabled (no-op).
-    """
+    """Enqueue (or send) SMS to clinicians for high-risk scans."""
+    _init()
+    if not _SMS_ENABLED or not _CLINICIAN_PHONES:
+        return
+
+    try:
+        from backend.alert_queue import is_enabled as _aq_enabled, enqueue_alert as _enqueue
+
+        if _aq_enabled():
+            if _enqueue(
+                "sms_high_risk",
+                {
+                    "scan_id": scan_id,
+                    "patient_id": patient_id,
+                    "imt_mm": imt_mm,
+                    "risk_level": risk_level,
+                },
+            ):
+                logger.info("Enqueued sms_high_risk for scan_id=%s", scan_id)
+                return
+    except Exception:
+        # Fall back to direct sending if queue enqueue fails.
+        logger.exception("Queue enqueue failed; falling back to direct SMS send.")
+
+    notify_high_risk_direct(scan_id, patient_id, imt_mm, risk_level)
+
+
+def notify_high_risk_direct(
+    scan_id: str,
+    patient_id: str,
+    imt_mm: float,
+    risk_level: str,
+) -> None:
+    """Send SMS to configured clinician numbers (direct, no queue)."""
     _init()
     if not _SMS_ENABLED or not _CLINICIAN_PHONES:
         return
@@ -54,13 +85,18 @@ def notify_high_risk(
         f"Wall thickness {imt_mm:.1f} mm ({risk_level}). "
         f"Scan ID: {scan_id}. Refer to Gasabo District."
     )
-    try:
-        import africastalking
-        sms = africastalking.SMS
-        response = sms.send(message, _CLINICIAN_PHONES)
-        logger.info("High-risk SMS sent: %s", response)
-    except Exception as e:
-        logger.exception("Failed to send high-risk SMS: %s", e)
+    for attempt in range(1, 4):
+        try:
+            import africastalking
+            sms = africastalking.SMS
+            response = sms.send(message, _CLINICIAN_PHONES)
+            logger.info("High-risk SMS sent (attempt %d): %s", attempt, response)
+            return
+        except Exception as e:
+            if attempt == 3:
+                logger.exception("Failed to send high-risk SMS after retries: %s", e)
+                return
+            time.sleep(0.6 * attempt)
 
 
 def send_chw_id_sms(phone: str, staff_id: str) -> bool:
@@ -74,19 +110,48 @@ def send_chw_id_sms(phone: str, staff_id: str) -> bool:
     phone = _normalize_phone(phone)
     if not phone:
         return False
+
+    try:
+        from backend.alert_queue import is_enabled as _aq_enabled, enqueue_alert as _enqueue
+
+        if _aq_enabled():
+            if _enqueue(
+                "sms_chw_id",
+                {
+                    "phone": phone,
+                    "staff_id": staff_id,
+                },
+            ):
+                logger.info("Enqueued sms_chw_id for phone=%s", phone)
+                return True
+    except Exception:
+        logger.exception("Queue enqueue failed; falling back to direct CHW SMS send.")
+
+    return send_chw_id_sms_direct(phone, staff_id)
+
+
+def send_chw_id_sms_direct(phone: str, staff_id: str) -> bool:
+    """Send CHW ID SMS (direct, no queue)."""
+    _init()
+    if not _SMS_ENABLED:
+        return False
     message = (
         f"CarotidCheck: Your login ID is {staff_id}. "
         f"Use it with your password to sign in. Keep this message for your records."
     )
-    try:
-        import africastalking
-        sms = africastalking.SMS
-        response = sms.send(message, [phone])
-        logger.info("CHW ID SMS sent to %s: %s", phone, response)
-        return True
-    except Exception as e:
-        logger.exception("Failed to send CHW ID SMS: %s", e)
-        return False
+    for attempt in range(1, 4):
+        try:
+            import africastalking
+            sms = africastalking.SMS
+            response = sms.send(message, [phone])
+            logger.info("CHW ID SMS sent to %s (attempt %d): %s", phone, attempt, response)
+            return True
+        except Exception as e:
+            if attempt == 3:
+                logger.exception("Failed to send CHW ID SMS after retries: %s", e)
+                return False
+            time.sleep(0.6 * attempt)
+    return False
 
 
 def _normalize_phone(phone: str) -> str:

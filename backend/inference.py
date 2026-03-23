@@ -199,6 +199,11 @@ def predict_imt(
     pred_class = (pred_mask > 0.5).astype(np.uint8)
 
     # Scale spacing: mask is 256x256, resized from max(orig_h,orig_w)
+    pixel_spacing_source = (
+        "default"
+        if abs(float(spacing_mm_per_pixel) - float(DEFAULT_SPACING_MM_PER_PIXEL)) < 1e-9
+        else "metadata"
+    )
     max_dim = max(orig_h, orig_w)
     effective_spacing = (max_dim / 256.0) * spacing_mm_per_pixel
     imt_mm = _imt_mm_from_mask(pred_class, effective_spacing)
@@ -262,6 +267,8 @@ def predict_imt(
         "stenosis_source": stenosis_source,  # "nascet" = lumen-based; "imt_correlation" = estimated
         "foreground_prob": round(foreground_prob, 3),
         "inference_time_sec": round(inference_time_sec, 3),
+        "pixel_spacing_mm": float(spacing_mm_per_pixel),
+        "pixel_spacing_source": pixel_spacing_source,
         "segmentation_overlay_base64": overlay_b64,
         "has_ai_overlay": has_ai_overlay,
     }
