@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { getScanResult, patchScanReview } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { useLocale } from '../context/LocaleContext'
+import { usePendingReferrals } from '../context/PendingReferralsContext'
 import ScanThumbnail from '../components/ScanThumbnail'
 import './ReferralPage.css'
 
@@ -10,6 +11,7 @@ export default function ReferralPage() {
   const { scanId } = useParams()
   const { user } = useAuth()
   const { t, dateLocaleTag } = useLocale()
+  const { refreshPending } = usePendingReferrals()
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -65,6 +67,7 @@ export default function ReferralPage() {
       })
       setResult(updated)
       setNotes(updated.clinical_notes || '')
+      await refreshPending()
     } catch (e) {
       setSaveError(e.message || 'Could not save')
     } finally {
