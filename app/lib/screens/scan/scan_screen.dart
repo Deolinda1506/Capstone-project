@@ -412,24 +412,27 @@ class _ScanScreenState extends State<ScanScreen> {
                   ),
                 ),
               const SizedBox(height: 24),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              Row(
                 children: [
-                  SizedBox(
-                    width: 220,
+                  Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () => _pickImage(ImageSource.camera),
                       icon: const Icon(Icons.camera_alt),
-                      label: Text(context.l10n.t('camera')),
+                      label: Text(
+                        context.l10n.t('camera'),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                  SizedBox(
-                    width: 220,
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () => _pickImage(ImageSource.gallery),
                       icon: const Icon(Icons.photo_library),
-                      label: Text(context.l10n.t('gallery')),
+                      label: Text(
+                        context.l10n.t('gallery'),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                 ],
@@ -445,7 +448,11 @@ class _ScanScreenState extends State<ScanScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(context.l10n.t('analyze')),
+                    : Text(
+                        _imageBytes == null
+                            ? '${context.l10n.t('analyze')} (select image first)'
+                            : context.l10n.t('analyze'),
+                      ),
               ),
               if (_imageBytes == null) ...[
                 const SizedBox(height: 8),
