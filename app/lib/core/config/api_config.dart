@@ -1,7 +1,7 @@
 /// Backend API base URL (no trailing slash).
 ///
-/// **Default:** `http://localhost:8000` — only works when the FastAPI server is
-/// running on the **same machine** as the app (e.g. `uvicorn` on port 8000).
+/// **Default:** `https://carotidcheck-api.onrender.com` (deployed backend).
+/// For local development, override with `--dart-define=API_BASE_URL=http://localhost:8000`.
 ///
 /// If the browser shows `ERR_CONNECTION_REFUSED` for `/auth/register` or similar:
 /// - **Flutter web / Chrome:** either start the API locally, or point at a deployed API.
@@ -20,6 +20,6 @@ class ApiConfig {
 
   static String get baseUrl => const String.fromEnvironment(
         'API_BASE_URL',
-        defaultValue: 'http://localhost:8000',
+        defaultValue: 'https://carotidcheck-api.onrender.com',
       );
 }

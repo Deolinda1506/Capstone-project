@@ -6,7 +6,7 @@ import 'package:http_parser/http_parser.dart';
 /// Backend API client for CarotidCheck
 class ApiClient {
   ApiClient({String? baseUrl})
-    : _baseUrl = (baseUrl ?? 'http://localhost:8000').replaceAll(
+    : _baseUrl = (baseUrl ?? 'https://carotidcheck-api.onrender.com').replaceAll(
         RegExp(r'/$'),
         '',
       );
