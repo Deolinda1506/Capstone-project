@@ -83,8 +83,11 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 
 **Production API URL:**
 ```bash
+flutter run -d chrome --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
 flutter run --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
 ```
+
+**`ERR_CONNECTION_REFUSED` on `:8000/auth/...`:** The app defaults to `http://localhost:8000`. Nothing is listening there unless you started the API (`uvicorn`) on the same machine. For Flutter **web**, use the command above with your deployed API, or run the backend locally first. Messages like `DDC is about to load … scripts` are normal debug output, not failures.
 
 ### Step 5: Run the Hospital Dashboard (Web)
 
