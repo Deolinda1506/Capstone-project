@@ -187,6 +187,12 @@ class _ScanScreenState extends State<ScanScreen> {
     if (err.contains('XMLHttpRequest error') || err.contains('Failed to fetch')) {
       return 'Upload failed to reach server (possible Render cold start). Please wait 20-30s and retry.';
     }
+    final lowerErr = err.toLowerCase();
+    if (lowerErr.contains('prediction failed') ||
+        lowerErr.contains('could not be processed') ||
+        lowerErr.contains('invalid image')) {
+      return 'This image could not be analyzed. Please use a clear carotid ultrasound image and try again.';
+    }
     if (err.toLowerCase().contains('timed out')) {
       return 'Upload took too long. Please retry with a clearer/smaller image.';
     }
@@ -203,7 +209,7 @@ class _ScanScreenState extends State<ScanScreen> {
         return 'Image is too large. Please use a smaller image and retry.';
       case 500:
       case 503:
-        return 'Server could not analyze the image right now. Please try again shortly.';
+        return 'Server could not analyze this image. Please use a clear carotid ultrasound image and retry.';
       default:
         return err;
     }
@@ -262,7 +268,7 @@ class _ScanScreenState extends State<ScanScreen> {
         context,
         title: context.l10n.t('carotidScan'),
         fallbackPath: '/patient/capture',
-        titleSpacing: 14,
+        titleSpacing: 20,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
