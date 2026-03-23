@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
 
 from backend.database import engine, Base
@@ -274,6 +275,13 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
     Return JSON for unexpected errors (e.g. SQLAlchemy) instead of Starlette's plain 'Internal Server Error'.
     Set EXPOSE_INTERNAL_ERRORS=0 to hide exception text in production.
     """
+    if isinstance(exc, StarletteHTTPException):
+        hdr = dict(exc.headers) if exc.headers else None
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=hdr,
+        )
     expose = os.getenv("EXPOSE_INTERNAL_ERRORS", "1").strip().lower() in ("1", "true", "yes")
     if expose:
         detail = f"{type(exc).__name__}: {str(exc)[:500]}"
