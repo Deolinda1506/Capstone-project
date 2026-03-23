@@ -10,7 +10,8 @@ from backend.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 def create_access_token(subject: str, extra: dict[str, Any] | None = None) -> str:
     """Create a JWT with subject (user id) and optional extra claims."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode = {"sub": subject, "exp": expire}
+    # NumericDate (int) avoids edge cases with python-jose + aware datetimes on some runtimes
+    to_encode = {"sub": subject, "exp": int(expire.timestamp())}
     if extra:
         to_encode.update(extra)
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)

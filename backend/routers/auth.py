@@ -230,6 +230,12 @@ def register_hospital(
     except HTTPException:
         db.rollback()
         raise
+    except ValueError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e) or "Invalid input",
+        ) from e
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -247,8 +253,16 @@ def register_hospital(
             ),
         ) from None
 
-    token = create_access_token(subject=admin.id)
-    return TokenResponse(access_token=token, user=_user_response(admin, db))
+    try:
+        token = create_access_token(subject=admin.id)
+        return TokenResponse(access_token=token, user=_user_response(admin, db))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{type(e).__name__}: {str(e)[:400]}",
+        ) from e
 
 
 @router.post("/invite-user", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

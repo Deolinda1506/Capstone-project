@@ -84,7 +84,8 @@ class UserResponse(BaseModel):
     hospital_id: str | None = None
     hospital_name: str | None = None  # Set when building response from User with hospital
     status: str | None = None  # pending | approved
-    created_at: datetime
+    # Older rows / edge cases: avoid 500 on response validation
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
