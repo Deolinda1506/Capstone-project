@@ -8,6 +8,10 @@ database_url = get_database_url()
 connect_args = {}
 if "sqlite" in database_url:
     connect_args["check_same_thread"] = False
+elif "postgresql" in database_url.lower():
+    # Render/managed Postgres often requires SSL; skip if URL already sets sslmode
+    if "sslmode" not in database_url.lower():
+        connect_args["sslmode"] = "require"
 
 engine = create_engine(
     database_url,
