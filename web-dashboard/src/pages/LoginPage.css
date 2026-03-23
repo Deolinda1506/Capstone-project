@@ -51,6 +51,21 @@
   border-color: var(--color-primary);
 }
 
+.login-forgot-wrap {
+  text-align: right;
+  margin: -0.5rem 0 1rem;
+}
+
+.login-forgot-link {
+  font-size: 0.875rem;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.login-forgot-link:hover {
+  text-decoration: underline;
+}
+
 .login-error {
   padding: 0.6rem;
   background: var(--color-danger-bg);
@@ -71,4 +86,18 @@
   text-align: center;
   font-size: 0.9rem;
   color: var(--color-text-muted);
+}
+
+.forgot-success {
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 1.25rem;
+}
+
+.forgot-hint {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: -0.5rem 0 1rem;
+  line-height: 1.4;
 }

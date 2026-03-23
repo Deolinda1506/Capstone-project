@@ -55,6 +55,11 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </label>
+          <div className="login-forgot-wrap">
+            <Link to="/forgot-password" className="login-forgot-link">
+              {t('login.forgotPassword')}
+            </Link>
+          </div>
           {error && <div className="login-error">{error}</div>}
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? t('login.loggingIn') : t('login.submit')}

@@ -24,6 +24,9 @@ services:
         generateValue: true
       - key: DISABLE_AUTH
         value: "0"
+      # Password reset emails link here (must match deployed dashboard origin).
+      - key: PASSWORD_RESET_BASE_URL
+        value: https://carotidcheck-dashboard.onrender.com
 
   # Clinician web dashboard (Vite/React SPA → CDN). Build bakes in VITE_API_URL.
   - type: web

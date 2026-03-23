@@ -4,6 +4,8 @@ import { useLocale } from './context/LocaleContext'
 import AppLayout from './components/AppLayout'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import RegisterOrganizationPage from './pages/RegisterOrganizationPage'
 import DashboardPage from './pages/DashboardPage'
 import SettingsPage from './pages/SettingsPage'
@@ -31,6 +33,8 @@ export default function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+      <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPasswordPage /></PublicOnlyRoute>} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/register-organization" element={<PublicOnlyRoute><RegisterOrganizationPage /></PublicOnlyRoute>} />
       <Route
         path="/dashboard"
