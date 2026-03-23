@@ -18,6 +18,9 @@ services:
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
 
     envVars:
+      # TensorFlow has no wheels for Python 3.14+ yet; Render default is 3.14.x without this.
+      - key: PYTHON_VERSION
+        value: "3.11.11"
       - key: DATABASE_URL
         fromDatabase:
           name: carotidcheck-db
