@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useSearch } from '../context/SearchContext'
 import { useLocale } from '../context/LocaleContext'
-import { getHighRisk, getScansWithResults } from '../api/client'
+import { getHighRisk, getScansWithResults, getLatencyStats } from '../api/client'
 import ScanThumbnail from '../components/ScanThumbnail'
 import {
   BarChart,
@@ -24,6 +24,12 @@ export default function DashboardPage() {
   const { t, dateLocaleTag } = useLocale()
   const [highRisk, setHighRisk] = useState([])
   const [allScans, setAllScans] = useState([])
+  const [latency, setLatency] = useState({
+    count: 0,
+    mean_sec: null,
+    min_sec: null,
+    max_sec: null,
+  })
   const [loading, setLoading] = useState(true)
   /** @type {['all' | 'pending' | 'reviewed', React.Dispatch<React.SetStateAction<'all' | 'pending' | 'reviewed'>>]} */
   const [reviewTab, setReviewTab] = useState(
@@ -36,14 +42,26 @@ export default function DashboardPage() {
     Promise.all([
       getHighRisk(100, nameFilter, reviewTab),
       getScansWithResults(200, nameFilter),
+      getLatencyStats(),
     ])
-      .then(([hr, scans]) => {
+      .then(([hr, scans, lat]) => {
         setHighRisk(hr)
         setAllScans(scans)
+        setLatency(
+          lat && typeof lat === 'object'
+            ? {
+                count: Number(lat.count || 0),
+                mean_sec: typeof lat.mean_sec === 'number' ? lat.mean_sec : null,
+                min_sec: typeof lat.min_sec === 'number' ? lat.min_sec : null,
+                max_sec: typeof lat.max_sec === 'number' ? lat.max_sec : null,
+              }
+            : { count: 0, mean_sec: null, min_sec: null, max_sec: null },
+        )
       })
       .catch(() => {
         setHighRisk([])
         setAllScans([])
+        setLatency({ count: 0, mean_sec: null, min_sec: null, max_sec: null })
       })
       .finally(() => setLoading(false))
   }, [searchQuery, reviewTab])
@@ -156,6 +174,32 @@ export default function DashboardPage() {
                 <Bar dataKey="scans" fill={RISK_COLORS.Moderate} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="chart-card">
+          <h3>{t('dashboard.inferenceLatency')}</h3>
+          <div className="latency-card-body">
+            <div className="latency-count">
+              {t('dashboard.latencySamples')}: <strong>{latency.count}</strong>
+            </div>
+            {latency.count > 0 ? (
+              <div className="latency-grid">
+                <div className="latency-stat">
+                  <span>{t('dashboard.latencyMean')}</span>
+                  <strong>{latency.mean_sec?.toFixed(3)} s</strong>
+                </div>
+                <div className="latency-stat">
+                  <span>{t('dashboard.latencyMin')}</span>
+                  <strong>{latency.min_sec?.toFixed(3)} s</strong>
+                </div>
+                <div className="latency-stat">
+                  <span>{t('dashboard.latencyMax')}</span>
+                  <strong>{latency.max_sec?.toFixed(3)} s</strong>
+                </div>
+              </div>
+            ) : (
+              <div className="latency-empty">{t('dashboard.latencyEmpty')}</div>
+            )}
           </div>
         </div>
       </div>

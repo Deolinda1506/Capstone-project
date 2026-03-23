@@ -41,6 +41,10 @@ export async function getScanResult(scanId) {
   return apiRequest(`/scans/${scanId}/result`)
 }
 
+export async function getLatencyStats() {
+  return apiRequest('/latency')
+}
+
 export async function fetchScanImageBlob(scanId) {
   const token = localStorage.getItem('carotidcheck_token')
   const res = await fetch(`${API_BASE}/scans/${scanId}/image`, {

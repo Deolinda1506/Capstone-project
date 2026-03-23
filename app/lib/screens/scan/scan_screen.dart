@@ -139,11 +139,10 @@ class _ScanScreenState extends State<ScanScreen> {
       } else {
         final err = uploadRes.error ?? context.l10n.t('analysisFailed');
         final status = uploadRes.statusCode;
+        final msg = await _diagnoseUploadFailure(auth, err, status);
         messenger.showSnackBar(
           SnackBar(
-            content: Text(
-              _friendlyUploadErrorMessage(err, status),
-            ),
+            content: Text(msg),
           ),
         );
       }
@@ -155,6 +154,32 @@ class _ScanScreenState extends State<ScanScreen> {
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
+  }
+
+  Future<String> _diagnoseUploadFailure(
+    AuthService auth,
+    String err,
+    int? statusCode,
+  ) async {
+    final base = _friendlyUploadErrorMessage(err, statusCode);
+
+    // If we already have a clear HTTP classification, return it directly.
+    if (statusCode != null) return base;
+
+    // For transport-level failures, probe health to distinguish backend-down vs
+    // browser/network edge behavior that often appears as "CORS" in DevTools.
+    if (err.contains('XMLHttpRequest error') || err.contains('Failed to fetch')) {
+      final health = await auth.api.health();
+      if (!health.success) {
+        return 'Server is currently unreachable. Please wait 20-30s and retry.';
+      }
+      if (auth.authToken == null) {
+        return 'You are not logged in. Please sign in again, then retry the scan upload.';
+      }
+      return 'Upload request was blocked in the browser/network path. Refresh the page and retry. If it persists, sign out and sign in again.';
+    }
+
+    return base;
   }
 
   String _friendlyUploadErrorMessage(String err, int? statusCode) {
