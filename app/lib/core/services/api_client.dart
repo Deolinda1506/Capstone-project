@@ -42,9 +42,12 @@ class ApiClient {
       http.Response response;
       if (fileBytes != null && fileField != null) {
         final request = http.MultipartRequest('POST', uri);
-        request.headers['Authorization'] = _token != null
-            ? 'Bearer $_token'
-            : '';
+        // Only set Authorization when we actually have a token.
+        // Sending `Authorization: Bearer ` (empty token) can trigger stricter
+        // CORS preflight behavior in some environments.
+        if (_token != null) {
+          request.headers['Authorization'] = 'Bearer $_token';
+        }
         request.headers['Accept'] = 'application/json';
         request.files.add(
           http.MultipartFile.fromBytes(
