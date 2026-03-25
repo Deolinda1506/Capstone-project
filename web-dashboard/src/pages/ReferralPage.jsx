@@ -133,7 +133,7 @@ export default function ReferralPage() {
             <dl>
               <dt>{t('referral.imt')}</dt>
               <dd>
-                <strong>{result.imt_mm} mm</strong>
+                <strong>{result.imt_mm != null ? `${result.imt_mm} mm` : '—'}</strong>
               </dd>
               <dt>{t('referral.riskLevel')}</dt>
               <dd>

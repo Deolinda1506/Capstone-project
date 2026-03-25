@@ -218,6 +218,12 @@ def _ensure_postgres_schema():
             ):
                 if col not in rcols:
                     _ddl(f"ALTER TABLE results ADD COLUMN IF NOT EXISTS {col} {ddl}")
+            # Allow NULL imt_mm when IMT cannot be measured (no synthetic fallback in inference)
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE results ALTER COLUMN imt_mm DROP NOT NULL"))
+            except Exception:
+                log.debug("Postgres: results.imt_mm DROP NOT NULL skipped (already nullable or not applicable)", exc_info=True)
     except Exception:
         log.exception("Postgres schema introspection failed (non-fatal)")
 

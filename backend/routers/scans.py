@@ -202,7 +202,8 @@ async def upload_scan_image(
             risk_level=pred["risk_level"],
         )
     # Plaque heuristic: IMT >= 0.9 mm indicates wall thickening/plaque (moderate+ risk)
-    plaque_detected = pred["imt_mm"] >= 0.9
+    imt_v = pred.get("imt_mm")
+    plaque_detected = imt_v is not None and imt_v >= 0.9
     return ScanUploadResponse(
         scan=scan,
         result=result,
@@ -215,6 +216,8 @@ async def upload_scan_image(
         patient_age=patient_age,
         pixel_spacing_mm=pred.get("pixel_spacing_mm"),
         pixel_spacing_source=pred.get("pixel_spacing_source"),
+        inference_success=pred.get("success", True),
+        inference_error=pred.get("error") if pred.get("success") is False else None,
     )
 
 
@@ -237,7 +240,7 @@ def risk_distribution_summary(
     if role == "chw":
         q = q.join(Patient, Patient.id == Scan.patient_id).filter(Patient.user_id == current_user.id)
     rows = q.group_by(Result.risk_level).all()
-    by_level: dict[str, int] = {"Low": 0, "Moderate": 0, "High": 0}
+    by_level: dict[str, int] = {"Low": 0, "Moderate": 0, "High": 0, "Unknown": 0}
     for level, n in rows:
         k = (level or "").strip()
         if k in by_level:
@@ -288,7 +291,7 @@ def list_scans_with_results(
             "is_high_risk": r.is_high_risk,
             "stenosis_pct": r.stenosis_pct,
             "stenosis_source": r.stenosis_source,
-            "plaque_detected": r.imt_mm >= 0.9,
+            "plaque_detected": r.imt_mm is not None and r.imt_mm >= 0.9,
             "has_image": bool(s.image_path),
             **_review_fields(s),
         }
@@ -349,7 +352,7 @@ def list_high_risk_referrals(
             "is_high_risk": r.is_high_risk,
             "stenosis_pct": r.stenosis_pct,
             "stenosis_source": r.stenosis_source,
-            "plaque_detected": r.imt_mm >= 0.9,
+            "plaque_detected": r.imt_mm is not None and r.imt_mm >= 0.9,
             "has_image": bool(s.image_path),
             **_review_fields(s),
         }
@@ -406,7 +409,7 @@ def update_clinician_review(
         "is_high_risk": r.is_high_risk,
         "stenosis_pct": r.stenosis_pct,
         "stenosis_source": r.stenosis_source,
-        "plaque_detected": r.imt_mm >= 0.9,
+        "plaque_detected": r.imt_mm is not None and r.imt_mm >= 0.9,
         "has_image": bool(scan.image_path),
         **_review_fields(scan),
     }
@@ -446,7 +449,7 @@ def get_scan_result(
         "is_high_risk": r.is_high_risk,
         "stenosis_pct": r.stenosis_pct,
         "stenosis_source": r.stenosis_source,
-        "plaque_detected": r.imt_mm >= 0.9,
+        "plaque_detected": r.imt_mm is not None and r.imt_mm >= 0.9,
         "has_image": bool(scan.image_path),
         **_review_fields(scan),
     }

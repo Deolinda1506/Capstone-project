@@ -84,6 +84,16 @@
   border-radius: 4px;
 }
 
+.risk-badge.risk-unknown {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.2);
+  color: #64748b;
+}
+
 .referral-image {
   min-height: 300px;
 }

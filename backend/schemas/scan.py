@@ -29,7 +29,7 @@ class ResultCreate(BaseModel):
 class ResultResponse(BaseModel):
     id: str
     scan_id: str
-    imt_mm: float
+    imt_mm: float | None = None
     risk_level: str
     is_high_risk: bool
     model_version: str | None
@@ -46,11 +46,13 @@ class ScanUploadResponse(BaseModel):
     has_ai_overlay: bool = False  # True when overlay is from AI segmentation (green mask)
     plaque_detected: bool | None = None  # Derived from IMT: True if IMT >= 0.9 mm
     stenosis_pct: float | None = None  # NASCET: (1 - D_stenosis/D_distal) × 100
-    stenosis_source: str | None = None  # "nascet" = lumen-based (both walls); "imt_correlation" = estimated
+    stenosis_source: str | None = None  # "nascet" when lumen-based NASCET; else null
     inference_time_sec: float | None = None  # Latency of AI inference (seconds)
     patient_age: int | None = None  # When provided, age-specific IMT thresholds were applied
     pixel_spacing_mm: float | None = None  # Actual mm/pixel used for IMT calibration
     pixel_spacing_source: str | None = None  # "metadata" when provided, else "default"
+    inference_success: bool = True  # False when segmentation failed the structural sanity check
+    inference_error: str | None = None  # User-facing hint when inference_success is False
 
 
 class ClinicianReviewUpdate(BaseModel):

@@ -73,7 +73,7 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
             patientName: m['patient_identifier'] as String?,
             analyzedAt: m['created_at'] != null ? DateTime.tryParse(m['created_at'] as String) ?? DateTime.now() : DateTime.now(),
             risk: (m['risk_level'] as String? ?? 'low').toLowerCase(),
-            imt: (m['imt_mm'] as num?)?.toDouble() ?? 0.0,
+            imt: (m['imt_mm'] as num?)?.toDouble(),
             stenosisPct: (m['stenosis_pct'] as num?)?.toDouble(),
             stenosisSource: m['stenosis_source'] as String?,
             plaqueDetected: m['plaque_detected'] as bool?,
@@ -98,19 +98,23 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
         return AppTheme.riskHigh;
       case 'moderate':
         return AppTheme.riskModerate;
+      case 'unknown':
+        return Colors.blueGrey;
       default:
         return AppTheme.riskLow;
     }
   }
 
-  String _riskLabel(String risk) {
+  String _riskLabel(BuildContext context, String risk) {
     switch (risk.toLowerCase()) {
       case 'high':
-        return 'High';
+        return context.l10n.t('riskHigh');
       case 'moderate':
-        return 'Moderate';
+        return context.l10n.t('riskModerate');
+      case 'unknown':
+        return context.l10n.t('riskUnknown');
       default:
-        return 'Low';
+        return context.l10n.t('riskLow');
     }
   }
 
@@ -182,7 +186,7 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
                           ..._analyses.map((a) => _AnalysisCard(
                                 analysis: a,
                                 riskColor: _riskColor(a.risk),
-                                riskLabel: _riskLabel(a.risk),
+                                riskLabel: _riskLabel(context, a.risk),
                                 onTap: () => _openAnalysisResult(context, a),
                               )),
                         ],
@@ -210,7 +214,10 @@ class _AnalysisCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateStr = DateFormat('MMM d, y • HH:mm').format(analysis.analyzedAt);
-    final parts = [dateStr, 'IMT: ${analysis.imt.toStringAsFixed(1)} mm', '$riskLabel risk'];
+    final imtPart = analysis.imt != null
+        ? 'IMT: ${analysis.imt!.toStringAsFixed(1)} mm'
+        : context.l10n.t('imtNotAvailable');
+    final parts = [dateStr, imtPart, riskLabel];
     if (analysis.stenosisPct != null) {
       parts.add('Stenosis: ${analysis.stenosisPct!.toStringAsFixed(1)}%');
     }

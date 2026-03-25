@@ -371,7 +371,7 @@ The Momot (2022) Common Carotid Artery Ultrasound Dataset was used for training 
 
 ### Functional Requirements
 
-The system must allow Community Health Workers (CHWs) to register and log in, with support for online authentication and offline login after a first successful session. CHWs must be able to create and manage patients and to capture or upload carotid ultrasound images. The system must segment carotid artery walls and return IMT in millimetres, risk level, and stenosis percentage. The result screen must display an AI segmentation overlay. **Clinicians must be able to see pending high-risk referrals through the web dashboard**, including an in-app notification indicator (bell and numeric badge) driven by periodic API requests to list pending high-risk cases. Clinicians must be able to view high-risk referrals and past scan results. The system must store scans and results for longitudinal tracking.
+The system must allow Community Health Workers (CHWs) to register and log in, with support for online authentication and offline login after a first successful session. CHWs must be able to create and manage patients and to capture or upload carotid ultrasound images. The system must segment carotid artery walls and return **risk level** (Low, Moderate, High, or **Unknown** when IMT cannot be measured). It must return **IMT in millimetres when the mask passes quality checks**; otherwise IMT is absent (null) with a structured inference message (`inference_error`). **NASCET stenosis percentage** is returned **only when** the segmentation supports lumen diameters; otherwise stenosis is omitted (null)—the system does not infer stenosis from IMT alone. The result screen should display an **AI segmentation overlay when generation succeeds** (overlay may be absent on failure or low-confidence segmentation). **Clinicians must be able to see pending high-risk referrals through the web dashboard**, including an in-app notification indicator (bell and numeric badge) driven by periodic API requests to list pending high-risk cases. Clinicians must be able to view high-risk referrals and past scan results. The system must store scans and results for longitudinal tracking.
 
 ### Non-Functional Requirements
 
@@ -587,7 +587,7 @@ The backend runs on Python 3.12 and uses FastAPI for the REST API with asynchron
 
 | Module | Responsibility |
 |--------|----------------|
-| `backend/inference.py` | Loads the Attention U-Net model, preprocesses input images (padding and resizing to 256×256), performs segmentation, computes Intima-Media Thickness (IMT) using pixel-to-millimetre calibration, and derives stenosis (NASCET method) and risk level. |
+| `backend/inference.py` | Loads the Attention U-Net model, preprocesses input images (decode, square padding, resize to 256×256, normalization), performs segmentation, applies a **minimum foreground-pixel check** (rejects noise-level masks), computes IMT when geometry is valid (pixel-to-millimetre calibration), assigns risk (including **Unknown** when IMT is missing), derives **NASCET stenosis only when** lumen geometry is available, and optionally encodes a segmentation overlay. |
 | `backend/routers/scans.py` | Handles `POST /scans/upload`; invokes the inference pipeline, stores scan results in the database, and updates pending referral state for in-app dashboard notifications. |
 | `backend/latency.py` | Monitors inference performance and exposes `GET /latency` for performance metrics. **Production:** [https://carotidcheck-api.onrender.com/latency](https://carotidcheck-api.onrender.com/latency) |
 | `app/lib/screens/` | Flutter UI: login, dashboard, scan capture, result display, referral list for CHWs. |
@@ -603,9 +603,9 @@ The following screenshots illustrate key system functionalities. Each feature co
 - **Figure 4.2: Dashboard** — Displays total scans, high-risk referrals, and navigation to patient and scan features.  
 - **Figure 4.3: Patient Registration** — Allows CHWs to create and manage patient records.  
 - **Figure 4.4: Scan Capture** — Enables image capture or upload of carotid ultrasound scans.  
-- **Figure 4.5: Analysis Result** — Displays IMT (mm), risk level, stenosis percentage, and AI segmentation overlay.  
+- **Figure 4.5: Analysis Result** — Displays IMT (mm) when available, risk level (including Unknown), stenosis (NASCET) when available, and AI segmentation overlay when generated.  
 - **Figure 4.6: Analyses and Referrals** — Shows past scan results and supports referral tracking.  
-- **Figure 4.7: Clinician Web Dashboard (Overview)** — React + Vite dashboard ([`carotidcheck-dashboard.onrender.com`](https://carotidcheck-dashboard.onrender.com/dashboard)): dark-theme **Overview** with **risk distribution** (pie chart: High / Moderate / Low), **scans per day (last 14 days)** bar chart, **inference latency** summary, global search, **notification bell with badge** (pending items), **All analyses** table (patient, IMT, risk, referral queue, date), and **High-risk referrals** cards with pending/reviewed filters. Clinician-facing complement to the CHW Flutter app.
+- **Figure 4.7: Clinician Web Dashboard (Overview)** — React + Vite dashboard ([`carotidcheck-dashboard.onrender.com`](https://carotidcheck-dashboard.onrender.com/dashboard)): dark-theme **Overview** with **risk distribution** (pie chart: Low / Moderate / High / **Unknown**), **scans per day (last 14 days)** bar chart, **inference latency** summary, global search, **notification bell with badge** (pending items), **All analyses** table (patient, IMT, risk, referral queue, date), and **High-risk referrals** cards with pending/reviewed filters. Clinician-facing complement to the CHW Flutter app.
 
 ![Figure 4.7 — CarotidCheck clinician web dashboard: Overview (risk distribution, analyses table, high-risk referrals, notifications)](figures/figure-4.7-web-dashboard.png)
 
@@ -625,17 +625,13 @@ Testing was conducted to verify that the system meets both functional and non-fu
 
 ### 4.3.3 Unit testing outputs
 
-Unit testing was conducted on individual modules such as authentication, image upload, and AI inference. Automated tests focused on the inference pipeline, verifying IMT calculation, NASCET stenosis formula, and risk classification. Tests included synthetic masks (single-wall, empty), spacing scaling, risk level assignment (Low, Moderate, High), and model integration using the trained Attention U-Net.
+Unit testing was conducted on individual modules such as authentication, image upload, and AI inference. Automated tests focused on the inference pipeline, verifying IMT calculation, NASCET stenosis formula, risk classification (**including the upper-threshold High band**), **structural failure** when foreground pixels fall below the minimum, and model integration using a stubbed Attention U-Net (no full `.keras` load in CI).
 
 **Pytest proof of passing tests (example run):**
 
 ```
-============================= test session starts ==============================
-platform darwin -- Python 3.12.4, pytest-9.0.2
-collected 13 items
-
-tests/test_inference.py::TestImtMmFromMask::test_single_wall_mask PASSED
 tests/test_inference.py::TestImtMmFromMask::test_empty_mask_returns_nan PASSED
+tests/test_inference.py::TestImtMmFromMask::test_single_wall_mask PASSED
 tests/test_inference.py::TestImtMmFromMask::test_spacing_scaling PASSED
 tests/test_inference.py::TestStenosisPctNascet::test_nascet_formula PASSED
 tests/test_inference.py::TestStenosisPctNascet::test_fully_patent PASSED
@@ -645,13 +641,15 @@ tests/test_inference.py::TestStenosisPctNascet::test_clamped_to_0_100 PASSED
 tests/test_inference.py::TestRiskLevel::test_low_risk PASSED
 tests/test_inference.py::TestRiskLevel::test_moderate_risk PASSED
 tests/test_inference.py::TestRiskLevel::test_high_risk PASSED
+tests/test_inference.py::TestRiskLevel::test_exact_high_threshold_is_high PASSED
 tests/test_inference.py::TestValidationImtVsReference::test_imt_within_acceptable_variation PASSED
 tests/test_inference.py::TestModelInference::test_predict_imt_uses_model PASSED
+tests/test_inference.py::TestModelInference::test_predict_imt_fails_structural_check PASSED
 
-============================== 13 passed in 25.31s ==============================
+15 passed
 ```
 
-All 13 tests passed, confirming that the system correctly generates segmentation masks, calculates IMT values, classifies risk, and integrates with the Attention U-Net model.
+All **15** inference unit tests passed, confirming mask geometry handling, NASCET math, risk bands, **minimum-segmentation behavioural checks**, and stubbed model integration.
 
 ### 4.3.4 Validation testing outputs
 
@@ -681,7 +679,7 @@ All components interacted successfully, and no data loss or inconsistencies were
 | CHW login (online and offline) | Pass |
 | Patient registration | Pass |
 | Scan upload and processing | Pass |
-| AI analysis (IMT, risk, stenosis) | Pass |
+| AI analysis (IMT when present, risk incl. Unknown, NASCET stenosis when supported) | Pass |
 | In-app dashboard notifications (bell/badge, pending high-risk count) | Pass |
 | Clinician dashboard access | Pass |
 
@@ -689,7 +687,7 @@ The system maintained acceptable response time and performance under normal usag
 
 ### 4.3.7 Acceptance testing report
 
-Acceptance testing was conducted based on real user workflows, including CHW login, patient management, scan capture, and result review. The system met all key requirements, including carotid wall segmentation, IMT calculation, risk classification, and **clinician visibility of referrals through the web dashboard** (including the in-app notification indicator driven by the API). The solution is considered ready for pilot deployment, pending real-world validation and user feedback.
+Acceptance testing was conducted based on real user workflows, including CHW login, patient management, scan capture, and result review. The system met all key requirements, including carotid wall segmentation, **IMT when measurable**, risk classification (**including Unknown**), **conditional** NASCET stenosis, and **clinician visibility of referrals through the web dashboard** (including the in-app notification indicator driven by the API). The solution is considered ready for pilot deployment, pending real-world validation and user feedback.
 
 # CHAPTER FIVE: DESCRIPTION OF THE RESULTS / SYSTEM
 
@@ -735,9 +733,9 @@ In that sample, **mean ≈ 6.6 s** and **all runs exceeded the 5 s design target
 
 ### 5.1.3 Risk level distribution
 
-**Problem:** Stakeholders need a clear view of how often the system assigns **Low**, **Moderate**, and **High** risk, so that skew (e.g. mostly low-risk in a healthy cohort) is visible and interpretable.
+**Problem:** Stakeholders need a clear view of how often the system assigns **Low**, **Moderate**, **High**, or **Unknown** risk, so that skew (e.g. mostly low-risk in a healthy cohort) is visible and interpretable.
 
-**Results:** The pipeline classifies using IMT thresholds aligned with `backend/inference.py` (default: **Low** IMT &lt; 0.9 mm, **Moderate** 0.9–1.2 mm, **High** &gt; 1.2 mm). **Figure 5.3 is generated from stored analyses** (non-deleted scans with results): run **`PYTHONPATH=. python3 scripts/render_figure_5_3_from_db.py`** from the repo root (uses `DATABASE_URL` or default `data/carotidcheck.db`). If your **thesis machine only has empty local SQLite** but **production (Render) Postgres** holds the real scans, either set **`DATABASE_URL`** to the Render connection string for one run, or pass dashboard totals explicitly, e.g. **`--low 2 --moderate 1 --high 6`** when those match the **Overview → Risk distribution** pie chart. The script writes `thesis/figures/figure-5.3-risk-distribution.svg` and, on macOS, `.png`. Counts also appear via **`GET /scans/risk-distribution`**. For **Momot validation-set** histograms (not the app DB), use the ML notebook instead.
+**Results:** The pipeline classifies using IMT thresholds aligned with `backend/inference.py` (default adult bands: **Low** IMT &lt; 0.9 mm, **Moderate** 0.9 ≤ IMT &lt; 1.2 mm, **High** IMT ≥ 1.2 mm, with age-specific alternatives inside the code). **Unknown** is stored when IMT is not measurable or segmentation fails the minimum-foreground rule. **Figure 5.3 is generated from stored analyses** (non-deleted scans with results): run **`PYTHONPATH=. python3 scripts/render_figure_5_3_from_db.py`** from the repo root (uses `DATABASE_URL` or default `data/carotidcheck.db`). If your **thesis machine only has empty local SQLite** but **production (Render) Postgres** holds the real scans, either set **`DATABASE_URL`** to the Render connection string for one run, or pass dashboard totals explicitly, e.g. **`--low 2 --moderate 1 --high 6`** when those match the **Overview → Risk distribution** pie chart. The script writes `thesis/figures/figure-5.3-risk-distribution.svg` and, on macOS, `.png`; when **Unknown** &gt; 0, the SVG footnote reports that count (bars remain Low / Moderate / High). Counts also appear via **`GET /scans/risk-distribution`**. For **Momot validation-set** histograms (not the app DB), use the ML notebook instead.
 
 **Figure 5.3: Risk level distribution**
 
@@ -745,7 +743,7 @@ In that sample, **mean ≈ 6.6 s** and **all runs exceeded the 5 s design target
 
 **Graph type:** Bar chart.
 
-**Description:** The x-axis shows **risk category** (Low, Moderate, High); the y-axis is **number of analyses** stored in the database. Regenerate the figure after collecting scans so the bars match **`render_figure_5_3_from_db.py`** output. If *n* is small, state the sample size in the caption.
+**Description:** The x-axis shows **risk category** (Low, Moderate, High); the y-axis is **number of analyses** stored in the database. Regenerate the figure after collecting scans so the bars match **`render_figure_5_3_from_db.py`** output; reconcile **Unknown** counts with the dashboard/API **`by_risk_level`** bucket. If *n* is small, state the sample size in the caption.
 
 ## 5.2 Discussion
 
@@ -753,20 +751,20 @@ In that sample, **mean ≈ 6.6 s** and **all runs exceeded the 5 s design target
 
 **Research Question 1:** Both architectures segment carotid artery walls from ultrasound images, but Attention U-Net achieves higher Dice and IoU, making it the preferred model. Data augmentation via Albumentations supports robustness to noise and lighting variations in rural settings.
 
-**Research Question 2:** CarotidCheck delivers objective, image-driven biomarkers (IMT and stenosis) that detect preclinical arterial thickening. Unlike the FAST protocol, which detects post-onset stroke symptoms, CarotidCheck supports earlier intervention.
+**Research Question 2:** CarotidCheck delivers objective, **image-driven IMT** when segmentation is adequate, and **NASCET stenosis when lumen geometry is available**—both support preclinical triage context. Unlike the FAST protocol, which detects post-onset stroke symptoms, CarotidCheck supports earlier **screening-oriented** intervention when measurements exist; **Unknown** outcomes explicitly flag non-measurement rather than guessing values.
 
 **Research Question 3:** The React web dashboard provides **real-time awareness of high-risk cases** through API-polled in-app notifications (bell and badge counting pending referrals). Clinicians can access referrals, scan images, and patient histories in one place, reducing the delay between community screening and hospital action and helping to address the 72-hour “Treatment Vacuum.”
 
 ### 5.2.2 Implications
 
 - AI-driven carotid segmentation is feasible in low-resource, cloud-integrated settings.  
-- Dual-layer diagnostics (IMT + stenosis) support both early-stage and advanced-stage risk assessment.  
+- Combined use of **IMT** and **NASCET stenosis (when computable)** supports layered triage; neither is fabricated when the mask does not support it.  
 - Deployment aligns with Rwanda’s 4×4 Reform, empowering CHWs with digital tools for stroke triage.  
 
 ### 5.2.3 Limitations
 
 - The Momot dataset is predominantly from normal subjects; field validation with diverse pathologies is necessary.  
-- NASCET stenosis calculation requires dual-wall lumen segmentation. The system computes true NASCET when both walls are present; otherwise an IMT–stenosis correlation fallback may apply when only one wall is available.  
+- NASCET stenosis in production requires **lumen diameter estimates from the predicted mask** (`_lumen_diameter_px_per_column`). When geometry does not support this, **stenosis is omitted (null)**; there is **no IMT-derived or heuristic stenosis substitute** in the deployed pipeline.  
 - **Measured production latency** on free-tier cloud hosting can **exceed the 5 s design target** for every request in a small sample (e.g. mean **~6.6 s**, range **~5.9–8.2 s** for *n* = 6 from [`/latency`](https://carotidcheck-api.onrender.com/latency)). Paid hosting, GPU inference, model quantization, or keep-alive/warm-up strategies can mitigate this.  
 
 # CHAPTER SIX: CONCLUSIONS AND RECOMMENDATIONS
@@ -777,7 +775,7 @@ This research developed and implemented **CarotidCheck**, a cloud-integrated sof
 
 1. **Model comparison:** The Attention U-Net outperformed the Vision Transformer in carotid artery segmentation (Dice ~0.94 vs. ~0.87) and was selected for deployment. Both architectures remain viable for medical imaging in resource-limited settings.
 
-2. **Problem addressed:** CarotidCheck addresses the "Treatment Vacuum" by providing objective, image-driven IMT and stenosis measurements at the community level. **High-risk referrals are visible to clinicians in the web dashboard** (in-app notification bell and badge via API polling).
+2. **Problem addressed:** CarotidCheck addresses the "Treatment Vacuum" by providing objective, **image-driven IMT when measurable**, optional **NASCET stenosis when geometry allows**, and explicit **Unknown** outcomes when not. **High-risk referrals are visible to clinicians in the web dashboard** (in-app notification bell and badge via API polling).
 
 3. **End-to-end solution:** The system integrates segmentation, IMT calculation, risk classification, and referral notification into a single pipeline, accessible via a Flutter mobile app for CHWs, a React web dashboard for clinicians, and a FastAPI backend.
 

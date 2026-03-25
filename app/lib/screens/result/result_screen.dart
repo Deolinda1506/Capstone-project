@@ -33,9 +33,7 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialData != null &&
-        widget.initialData!['risk'] != null &&
-        widget.initialData!['imt'] != null) {
+    if (widget.initialData != null) {
       _data = _normalizeData(widget.initialData!);
       _loading = false;
     }
@@ -52,7 +50,11 @@ class _ResultScreenState extends State<ResultScreen> {
   Map<String, dynamic> _normalizeData(Map<String, dynamic> raw) {
     return {
       'risk': ((raw['risk_level'] ?? raw['risk']) as String? ?? 'low').toString().toLowerCase(),
-      'imt': (raw['imt_mm'] ?? raw['imt']) as num? ?? 0.0,
+      'imt': () {
+        final v = raw['imt_mm'] ?? raw['imt'];
+        if (v is num) return v.toDouble();
+        return null;
+      }(),
       'stenosisPct': (raw['stenosis_pct'] ?? raw['stenosisPct']) as num?,
       'stenosisSource': (raw['stenosis_source'] ?? raw['stenosisSource']) as String?,
       'plaqueDetected': (raw['plaque_detected'] ?? raw['plaqueDetected']) as bool?,
@@ -102,6 +104,8 @@ class _ResultScreenState extends State<ResultScreen> {
         return AppTheme.riskHigh;
       case 'moderate':
         return AppTheme.riskModerate;
+      case 'unknown':
+        return Colors.blueGrey;
       default:
         return AppTheme.riskLow;
     }
@@ -113,6 +117,8 @@ class _ResultScreenState extends State<ResultScreen> {
         return context.l10n.t('riskHigh');
       case 'moderate':
         return context.l10n.t('riskModerate');
+      case 'unknown':
+        return context.l10n.t('riskUnknown');
       default:
         return context.l10n.t('riskLow');
     }
@@ -124,6 +130,8 @@ class _ResultScreenState extends State<ResultScreen> {
         return context.l10n.t('riskHighExplained');
       case 'moderate':
         return context.l10n.t('riskModerateExplained');
+      case 'unknown':
+        return context.l10n.t('riskUnknownExplained');
       default:
         return context.l10n.t('riskLowExplained');
     }
@@ -136,7 +144,7 @@ class _ResultScreenState extends State<ResultScreen> {
     final patientIdentifier = d['patientIdentifier'] as String?;
     final patientName = d['patientName'] as String?;
     final risk = d['risk'] as String? ?? 'low';
-    final imt = (d['imt'] as num?)?.toDouble() ?? 0.0;
+    final imt = (d['imt'] as num?)?.toDouble();
     final dateStr = analyzedAt != null
         ? DateFormat('MMM d, y • HH:mm').format(DateTime.parse(analyzedAt))
         : '';
@@ -146,7 +154,7 @@ CarotidCheck – Referral Slip
 
 Patient ID: ${patientIdentifier ?? '—'}
 ${patientName != null ? 'Name: $patientName' : ''}
-IMT: ${imt.toStringAsFixed(1)} mm
+IMT: ${imt != null ? '${imt.toStringAsFixed(1)} mm' : context.l10n.t('imtNotAvailable')}
 Risk level: ${risk.toUpperCase()}
 Date: $dateStr
 
@@ -204,7 +212,7 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
     }
     final d = _data!;
     final risk = d['risk'] as String? ?? 'low';
-    final imt = (d['imt'] as num?)?.toDouble() ?? 0.0;
+    final imt = (d['imt'] as num?)?.toDouble();
     final stenosisPct = (d['stenosisPct'] as num?)?.toDouble();
     final stenosisSource = d['stenosisSource'] as String?;
     final plaqueDetected = d['plaqueDetected'] as bool?;
@@ -322,12 +330,14 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'IMT: ${imt.toStringAsFixed(1)} mm',
+                        imt != null
+                            ? 'IMT: ${imt.toStringAsFixed(1)} mm'
+                            : context.l10n.t('imtNotAvailable'),
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.w500,
                             ),
                       ),
-                      if ((d['patientAge'] as int?) != null) ...[
+                      if (imt != null && (d['patientAge'] as int?) != null) ...[
                         const SizedBox(height: 4),
                         Text(
                           context.l10n.t('ageSpecificThresholds', {'age': '${d['patientAge']}'}),
@@ -337,15 +347,17 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
                               ),
                         ),
                       ],
-                      const SizedBox(height: 8),
-                      Text(
-                        context.l10n.t('imtExplained'),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                              height: 1.4,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
+                      if (imt != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          context.l10n.t('imtExplained'),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                                height: 1.4,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Text(
                         _riskExplanation(context, risk),
@@ -365,7 +377,7 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
                     icon: Icons.bloodtype,
                     label: context.l10n.t('stenosis'),
                     value: '${stenosisPct.toStringAsFixed(1)}%'
-                        + (stenosisSource == 'nascet' ? ' (NASCET)' : ' (${context.l10n.t('estimated')})'),
+                        + (stenosisSource == 'nascet' ? ' (NASCET)' : ''),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -381,7 +393,7 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
                   value: _riskLabel(context, risk),
                   valueColor: _riskColor(risk),
                 ),
-                if (risk == 'high') ...[
+                if (risk.toLowerCase() == 'high') ...[
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -446,7 +458,7 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
                 const SizedBox(height: 32),
                 FilledButton(
                   onPressed: () => context.push('/referrals'),
-                  child: Text(risk == 'high' ? context.l10n.t('referToHospital') : context.l10n.t('viewReferralOptions')),
+                  child: Text(risk.toLowerCase() == 'high' ? context.l10n.t('referToHospital') : context.l10n.t('viewReferralOptions')),
                 ),
               ],
             ),

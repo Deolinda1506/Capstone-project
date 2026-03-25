@@ -22,16 +22,15 @@ void main() {
       expect(m.hasImage, isTrue);
     });
 
-    test('fromJson uses fallbacks for optional fields', () {
+    test('fromJson allows null imt', () {
       final m = AnalysisModel.fromJson({
         'id': 'scan-2',
         'analyzed_at': '2026-03-01T10:00:00.000Z',
         'risk': 'low',
-        'imt': 0.0,
       });
 
       expect(m.risk, 'low');
-      expect(m.imt, 0.0);
+      expect(m.imt, isNull);
       expect(m.patientId, isNull);
       expect(m.hasImage, isFalse);
     });

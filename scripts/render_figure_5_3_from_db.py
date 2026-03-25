@@ -54,7 +54,7 @@ def fetch_counts() -> tuple[dict[str, int], int]:
     finally:
         db.close()
 
-    by_level = {"Low": 0, "Moderate": 0, "High": 0}
+    by_level = {"Low": 0, "Moderate": 0, "High": 0, "Unknown": 0}
     for level, n in rows:
         k = (str(level) if level is not None else "").strip()
         if k in by_level:
@@ -203,10 +203,20 @@ def main() -> int:
         return 1
 
     low, mod, high = by_level["Low"], by_level["Moderate"], by_level["High"]
-    svg = build_svg(low, mod, high, total)
+    unk = by_level.get("Unknown", 0)
+    if unk and total > 0:
+        today = date.today().isoformat()
+        note = (
+            f"Source: stored analyses in database, total n={total}, generated {today}. "
+            f"Unknown risk n={unk}. "
+            "Thresholds: Low &lt;0.9 mm, Moderate 0.9-1.2 mm, High &gt;1.2 mm IMT."
+        )
+        svg = build_svg(low, mod, high, total, footnote=note)
+    else:
+        svg = build_svg(low, mod, high, total)
     SVG_OUT.write_text(svg, encoding="utf-8")
     print(f"Wrote {SVG_OUT}")
-    print(f"Low={low} Moderate={mod} High={high} total={total}")
+    print(f"Low={low} Moderate={mod} High={high} Unknown={unk} total={total}")
     try_png()
     if PNG_OUT.is_file():
         print(f"Wrote {PNG_OUT}")

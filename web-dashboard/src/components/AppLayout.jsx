@@ -119,7 +119,8 @@ export default function AppLayout({ children }) {
                               to={`/referral/${r.scan_id}`}
                               onClick={() => setNotificationsOpen(false)}
                             >
-                              {r.patient_name || r.patient_identifier} — {r.risk_level} — {r.imt_mm} mm
+                              {r.patient_name || r.patient_identifier} — {r.risk_level} —{' '}
+                              {r.imt_mm != null ? `${r.imt_mm} mm` : '—'}
                             </Link>
                           </li>
                         ))}

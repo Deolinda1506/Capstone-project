@@ -198,6 +198,10 @@ class AppLocalizations {
       'riskHigh': 'High Risk',
       'riskModerate': 'Moderate Risk',
       'riskLow': 'Low Risk',
+      'riskUnknown': 'Unknown risk',
+      'imtNotAvailable': 'Not available',
+      'riskUnknownExplained':
+          'IMT could not be measured from this scan. Discuss with a clinician if you have symptoms or concerns.',
       'referToHospital': 'Refer to Hospital',
       'viewReferralOptions': 'View Referral Options',
       'settings': 'Settings',
@@ -300,6 +304,10 @@ class AppLocalizations {
       'riskLowExplained': 'Risque faible : IMT < 3,0 mm. Poursuivre le suivi habituel.',
       'riskModerateExplained': 'Risque modéré : IMT 3,0–3,5 mm. Envisager un suivi avec un clinicien.',
       'riskHighExplained': 'Risque élevé : IMT ≥ 3,5 mm. Référer à l\'hôpital du district de Gasabo, Kigali.',
+      'riskUnknown': 'Risque indéterminé',
+      'imtNotAvailable': 'Non disponible',
+      'riskUnknownExplained':
+          'L\'IMT n\'a pas pu être mesuré pour ce scan. Consultez un clinicien en cas de symptômes ou d\'inquiétudes.',
       'noImageCaptured': 'Aucune image capturée',
       'camera': 'Appareil photo',
       'gallery': 'Galerie',
@@ -515,6 +523,10 @@ class AppLocalizations {
       'riskLowExplained': 'Ingorane nke: IMT < 0.9 mm. Gusuzuma gakondo; inama z\'ubuzima.',
       'riskModerateExplained': 'Ingorane idahagije: IMT 0.9–1.2 mm. Kohereza kuri ibitaro by\'akarere ka Gasabo.',
       'riskHighExplained': 'Ingorane nini: IMT > 1.2 mm. Kohereza byihuse kuri umuganga.',
+      'riskUnknown': 'Ingorane ntizwi',
+      'imtNotAvailable': 'Ntiboneka',
+      'riskUnknownExplained':
+          'IMT ntishobora kupimwa kuri ubu musuzuma. Vugana n\'umuganga niba ufite ibimenyetso cyangwa ukekeranya.',
       'noImageCaptured': 'Nta foto yafashwe',
       'camera': 'Kamera',
       'gallery': 'Galeri',

@@ -40,3 +40,11 @@ BSc. in Software Engineering | Gnon Deolinda Bio Bogore | Supervisor: Tunde Isia
 ## Related project
 
 This folder documents **CarotidCheck**: Flutter app, FastAPI backend, React `web-dashboard`, and ML assets in `ML/`.
+
+---
+
+## Thesis vs implementation (audit)
+
+**Canonical text:** **[CAROTIDCHECK-FINAL-REPORT.md](CAROTIDCHECK-FINAL-REPORT.md)** was reviewed against the repo (2026) for: nullable **IMT**, **Unknown** risk, minimum-foreground segmentation gate, **NASCET-only** stenosis (no IMT–stenosis heuristic), **`inference_success` / `inference_error`** on upload, risk band **High ≥** upper threshold (not strictly **>**), dashboard **Unknown** counts, and **15** `tests/test_inference.py` cases.
+
+**Draft chapters** ([01](01-chapter-one-introduction.md), [02](02-chapter-two-literature-review.md), [03](03-chapter-three-system-analysis-design.md)) still use the legacy name **StrokeLink** in places and describe **CLAHE + DWT** in the *product* pipeline; **deployed inference** (`backend/inference.py`) uses OpenCV decode, pad, resize 256×256, and normalization—align these drafts with the final report or annotate “training/enrichment literature” vs “production preprocess” when merging into PDF.

@@ -21,6 +21,9 @@ model = None
 
 DEFAULT_SPACING_MM_PER_PIXEL = 0.04
 
+# Segmentation too small to trust (noise / wrong field-of-view).
+MIN_FOREGROUND_PIXELS = 50
+
 logger = logging.getLogger(__name__)
 if _MODEL_PATH.exists():
     logger.info("ML model found at %s", _MODEL_PATH)
@@ -116,7 +119,7 @@ def _get_imt_thresholds(patient_age: int | None) -> tuple[float, float]:
     """
     Age-specific IMT thresholds (mm) for stroke risk.
     IMT naturally thickens with age; thresholds from NIH/AHA clinical guidelines.
-    Returns (moderate_mm, high_mm): Low < moderate, Moderate in [moderate, high], High > high.
+    Returns (moderate_mm, high_mm): Low if IMT < moderate; Moderate if moderate ≤ IMT < high; High if IMT ≥ high.
     """
     if patient_age is None or patient_age < 0:
         return (0.9, 1.2)  # Default: Low <0.9, Moderate 0.9–1.2, High >1.2
@@ -188,7 +191,11 @@ def predict_imt(
     return_segmentation_overlay: bool = True,
     patient_age: int | None = None,
 ) -> dict:
-    """Run inference; returns imt_mm, risk_level, foreground_prob, inference_time_sec, and optionally segmentation_overlay_base64."""
+    """
+    Run inference with a structural sanity check: very small masks are treated as failure
+    (no usable carotid segmentation). Otherwise returns real IMT (or Unknown if not measurable),
+    risk_level, NASCET stenosis when the lumen geometry supports it, and optional overlay.
+    """
     t0 = time.perf_counter()
     img_batch, original_gray, orig_h, orig_w = _preprocess_for_attention_unet(image_bytes)
     img_batch = np.expand_dims(img_batch, axis=0)
@@ -200,7 +207,6 @@ def predict_imt(
         pred_mask = pred_mask.squeeze()
     pred_class = (pred_mask > 0.5).astype(np.uint8)
 
-    # Scale spacing: mask is 256x256, resized from max(orig_h,orig_w)
     pixel_spacing_source = (
         "default"
         if abs(float(spacing_mm_per_pixel) - float(DEFAULT_SPACING_MM_PER_PIXEL)) < 1e-9
@@ -208,36 +214,64 @@ def predict_imt(
     )
     max_dim = max(orig_h, orig_w)
     effective_spacing = (max_dim / 256.0) * spacing_mm_per_pixel
-    imt_mm = _imt_mm_from_mask(pred_class, effective_spacing)
     foreground_prob = float(np.mean(pred_mask))
-    if np.isnan(imt_mm):
-        imt_mm = 0.5 + (foreground_prob * 1.0)  # Fallback: 0.5–1.5 mm range
+    foreground_pixels = int(np.sum(pred_class))
 
-    # NASCET stenosis: Stenosis % = (1 - D_stenosis / D_distal) × 100
-    # D_stenosis = narrowest lumen diameter; D_distal = normal distal reference
+    if foreground_pixels < MIN_FOREGROUND_PIXELS:
+        logger.warning(
+            "Inference failed ethical check: foreground_pixels=%s < %s",
+            foreground_pixels,
+            MIN_FOREGROUND_PIXELS,
+        )
+        t1 = time.perf_counter()
+        return {
+            "success": False,
+            "error": (
+                "Structure not detected. Please ensure the ultrasound is centered on the carotid artery."
+            ),
+            "imt_mm": None,
+            "stenosis_pct": None,
+            "stenosis_source": None,
+            "risk_level": "Unknown",
+            "is_high_risk": False,
+            "foreground_prob": round(foreground_prob, 3),
+            "inference_time_sec": round(t1 - t0, 4),
+            "pixel_spacing_mm": round(float(effective_spacing), 4),
+            "pixel_spacing_source": pixel_spacing_source,
+            "segmentation_overlay_base64": None,
+            "has_ai_overlay": False,
+        }
+
+    imt_mm = _imt_mm_from_mask(pred_class, effective_spacing)
+
+    # NASCET stenosis only when lumen diameters can be estimated from the mask.
     lumen_px = _lumen_diameter_px_per_column(pred_class)
-    stenosis_pct = np.nan
-    stenosis_source = "imt_correlation"  # Default: fallback when both walls not detected
+    stenosis_pct: float | None = None
+    stenosis_source: str | None = None
     if np.any(np.isfinite(lumen_px)):
         lumen_mm = lumen_px * effective_spacing
-        D_stenosis_mm = float(np.nanmin(lumen_mm))  # Narrowest residual lumen
-        D_distal_mm = float(np.nanmax(lumen_mm))   # Normal distal reference (widest segment)
+        D_stenosis_mm = float(np.nanmin(lumen_mm))
+        D_distal_mm = float(np.nanmax(lumen_mm))
         if D_distal_mm > 0:
-            stenosis_pct = _stenosis_pct_nascet(D_stenosis_mm, D_distal_mm)
-            stenosis_source = "nascet"  # Both walls segmented; true lumen-based NASCET
-    if not np.isfinite(stenosis_pct):
-        # Fallback: derive from IMT–stenosis correlation when mask has single wall only
-        if imt_mm < 0.9:
-            stenosis_pct = (imt_mm / 0.9) * 50.0
-        elif imt_mm <= 1.2:
-            stenosis_pct = 50.0 + (imt_mm - 0.9) / 0.3 * 19.0
-        else:
-            stenosis_pct = min(99.0, 70.0 + (imt_mm - 1.2) * 10.0)
+            pct = _stenosis_pct_nascet(D_stenosis_mm, D_distal_mm)
+            if np.isfinite(pct):
+                stenosis_pct = float(pct)
+                stenosis_source = "nascet"
 
-    # Risk thresholds: use age-specific when patient_age provided (NIH-aligned); else fixed
     moderate_mm, high_mm = _get_imt_thresholds(patient_age)
-    risk_level = "High" if imt_mm > high_mm else "Moderate" if imt_mm >= moderate_mm else "Low"
-    is_high_risk = imt_mm > high_mm
+    if not np.isfinite(imt_mm):
+        risk_level = "Unknown"
+        is_high_risk = False
+        imt_out = None
+    else:
+        imt_out = float(imt_mm)
+        if imt_out < moderate_mm:
+            risk_level = "Low"
+        elif imt_out < high_mm:
+            risk_level = "Moderate"
+        else:
+            risk_level = "High"
+        is_high_risk = risk_level == "High"
 
     overlay_b64 = None
     has_ai_overlay = False
@@ -249,27 +283,20 @@ def predict_imt(
             logger.info("AI overlay generated (Attention U-Net)")
         except Exception as e:
             logger.warning("Segmentation overlay failed: %s", e, exc_info=True)
-            try:
-                orig_u8 = np.clip(original_gray * 255 if np.max(original_gray) <= 1 else original_gray, 0, 255).astype(np.uint8)
-                rgb = np.stack([orig_u8, orig_u8, orig_u8], axis=-1)
-                ok, png = cv2.imencode(".png", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
-                if ok and png is not None:
-                    overlay_b64 = base64.b64encode(png.tobytes()).decode("ascii")
-            except Exception as e2:
-                logger.warning("Fallback overlay failed: %s", e2)
 
     inference_time_sec = time.perf_counter() - t0
     logger.info("Inference completed in %.2f s", inference_time_sec)
 
     return {
-        "imt_mm": round(float(imt_mm), 2),
+        "success": True,
+        "imt_mm": None if imt_out is None else round(imt_out, 3),
         "risk_level": risk_level,
         "is_high_risk": is_high_risk,
-        "stenosis_pct": round(float(stenosis_pct), 1) if np.isfinite(stenosis_pct) else None,
-        "stenosis_source": stenosis_source,  # "nascet" = lumen-based; "imt_correlation" = estimated
+        "stenosis_pct": None if stenosis_pct is None else round(stenosis_pct, 1),
+        "stenosis_source": stenosis_source,
         "foreground_prob": round(foreground_prob, 3),
-        "inference_time_sec": round(inference_time_sec, 3),
-        "pixel_spacing_mm": float(spacing_mm_per_pixel),
+        "inference_time_sec": round(inference_time_sec, 4),
+        "pixel_spacing_mm": round(float(effective_spacing), 4),
         "pixel_spacing_source": pixel_spacing_source,
         "segmentation_overlay_base64": overlay_b64,
         "has_ai_overlay": has_ai_overlay,

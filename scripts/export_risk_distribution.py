@@ -38,7 +38,7 @@ def counts_all_patients():
             .group_by(Result.risk_level)
             .all()
         )
-        by_level = {"Low": 0, "Moderate": 0, "High": 0}
+        by_level = {"Low": 0, "Moderate": 0, "High": 0, "Unknown": 0}
         for level, n in rows:
             k = (level or "").strip()
             if k in by_level:
@@ -53,8 +53,8 @@ def main():
     print(json.dumps(data, indent=2))
     b = data["by_risk_level"]
     print(
-        "\nFor Figure 5.3 (thesis): Low={}, Moderate={}, High={}, total={}".format(
-            b["Low"], b["Moderate"], b["High"], data["total"]
+        "\nFor Figure 5.3 (thesis): Low={}, Moderate={}, High={}, Unknown={}, total={}".format(
+            b["Low"], b["Moderate"], b["High"], b["Unknown"], data["total"]
         ),
         file=sys.stderr,
     )

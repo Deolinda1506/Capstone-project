@@ -17,7 +17,12 @@ import {
 } from 'recharts'
 import './DashboardPage.css'
 
-const RISK_COLORS = { Low: '#22c55e', Moderate: '#f59e0b', High: '#dc2626' }
+const RISK_COLORS = {
+  Low: '#22c55e',
+  Moderate: '#f59e0b',
+  High: '#dc2626',
+  Unknown: '#94a3b8',
+}
 
 export default function DashboardPage() {
   const { searchQuery } = useSearch()
@@ -91,10 +96,11 @@ export default function DashboardPage() {
   }, [allScans, searchQuery])
 
   const riskDistribution = useMemo(() => {
-    const counts = { Low: 0, Moderate: 0, High: 0 }
+    const counts = { Low: 0, Moderate: 0, High: 0, Unknown: 0 }
     allScans.forEach((s) => {
-      const level = s.risk_level || 'Low'
-      if (counts[level] !== undefined) counts[level]++
+      const level = (s.risk_level || '').trim()
+      if (level in counts) counts[level]++
+      else counts.Unknown++
     })
     return Object.entries(counts).map(([name, value]) => ({ name, value }))
   }, [allScans])
@@ -337,7 +343,7 @@ export default function DashboardPage() {
                           {t('dashboard.age')} {r.patient_age}
                         </span>
                       )}
-                      IMT: {r.imt_mm} mm
+                      IMT: {r.imt_mm != null ? `${r.imt_mm} mm` : '—'}
                       {r.plaque_detected && <span className="plaque">{t('dashboard.plaque')}</span>}
                     </div>
                     <div className="referral-date">

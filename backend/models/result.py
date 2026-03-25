@@ -10,7 +10,7 @@ class Result(Base):
 
     id = Column(String(36), primary_key=True)
     scan_id = Column(String(36), ForeignKey("scans.id"), nullable=False, unique=True, index=True)
-    imt_mm = Column(Float, nullable=False)
+    imt_mm = Column(Float, nullable=True)  # None when segmentation does not support IMT (no synthetic fill)
     risk_level = Column(String(20), nullable=False)  # "Low", "Moderate", "High"
     is_high_risk = Column(Boolean, nullable=False)
     stenosis_pct = Column(Float, nullable=True)  # NASCET % when available

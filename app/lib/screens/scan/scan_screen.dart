@@ -110,7 +110,7 @@ class _ScanScreenState extends State<ScanScreen> {
         final scanId = scan?['id'] as String? ?? '';
         final result = uploadRes.data!['result'] as Map<String, dynamic>?;
         final risk = (result?['risk_level'] as String? ?? 'low').toLowerCase();
-        final imt = (result?['imt_mm'] as num?)?.toDouble() ?? 0.0;
+        final imt = (result?['imt_mm'] as num?)?.toDouble();
         final stenosisPct = (uploadRes.data!['stenosis_pct'] as num?)
             ?.toDouble();
         final stenosisSource = uploadRes.data!['stenosis_source'] as String?;

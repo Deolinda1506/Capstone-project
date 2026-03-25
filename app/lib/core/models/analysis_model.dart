@@ -5,10 +5,10 @@ class AnalysisModel {
   final int? patientAge;
   final String? patientGender;
   final DateTime analyzedAt;
-  final String risk; // low, moderate, high
-  final double imt; // intima-media thickness (mm)
+  final String risk; // low, moderate, high, unknown
+  final double? imt; // intima-media thickness (mm), null when not measurable
   final double? stenosisPct; // NASCET %
-  final String? stenosisSource; // "nascet" | "imt_correlation"
+  final String? stenosisSource; // "nascet" when stenosis from lumen mask
   final bool? plaqueDetected;
   final String? notes;
   final String? imagePath; // local path or URL for thumbnail
@@ -22,7 +22,7 @@ class AnalysisModel {
     this.patientGender,
     required this.analyzedAt,
     required this.risk,
-    required this.imt,
+    this.imt,
     this.stenosisPct,
     this.stenosisSource,
     this.plaqueDetected,
@@ -40,7 +40,7 @@ class AnalysisModel {
       patientGender: json['patient_gender'] as String?,
       analyzedAt: DateTime.parse(json['analyzed_at'] as String),
       risk: json['risk'] as String? ?? 'low',
-      imt: (json['imt'] as num?)?.toDouble() ?? 0.0,
+      imt: (json['imt'] as num?)?.toDouble(),
       plaqueDetected: json['plaque_detected'] as bool?,
       notes: json['notes'] as String?,
       imagePath: json['image_path'] as String?,

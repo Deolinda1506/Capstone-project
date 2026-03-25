@@ -53,12 +53,13 @@ class TestStenosisPctNascet:
 
 
 def _risk_level(imt_mm: float, patient_age: int | None) -> str:
+    """Match predict_imt bucketing (threshold-inclusive high band)."""
     moderate_mm, high_mm = inf._get_imt_thresholds(patient_age)
-    if imt_mm > high_mm:
-        return "High"
-    if imt_mm >= moderate_mm:
+    if imt_mm < moderate_mm:
+        return "Low"
+    if imt_mm < high_mm:
         return "Moderate"
-    return "Low"
+    return "High"
 
 
 class TestRiskLevel:
@@ -70,6 +71,10 @@ class TestRiskLevel:
 
     def test_high_risk(self):
         assert _risk_level(1.5, None) == "High"
+
+    def test_exact_high_threshold_is_high(self):
+        """At IMT == high_mm, classify as High (upper threshold inclusive)."""
+        assert _risk_level(1.2, None) == "High"
 
 
 class TestValidationImtVsReference:
@@ -105,6 +110,30 @@ class TestModelInference:
             patient_age=None,
         )
         assert "imt_mm" in result
-        assert result["risk_level"] in ("Low", "Moderate", "High")
+        assert result["risk_level"] in ("Low", "Moderate", "High", "Unknown")
         assert "inference_time_sec" in result
-        assert result["stenosis_source"] in ("nascet", "imt_correlation")
+        assert result["stenosis_source"] in ("nascet", None)
+        assert result.get("success") is True
+
+    def test_predict_imt_fails_structural_check(self, monkeypatch, minimal_png_bytes):
+        """Mask with < MIN_FOREGROUND_PIXELS foreground → success False and Unknown risk."""
+
+        class FakeModel:
+            def predict(self, batch, verbose=0):
+                _ = batch
+                out = np.zeros((1, 256, 256, 1), dtype=np.float32)
+                out[0, 100:101, 100:101, 0] = 0.9  # 1 pixel only
+                return out
+
+        monkeypatch.setattr(inf, "load_model", lambda: FakeModel())
+        result = inf.predict_imt(
+            minimal_png_bytes,
+            spacing_mm_per_pixel=inf.DEFAULT_SPACING_MM_PER_PIXEL,
+            return_segmentation_overlay=False,
+            patient_age=None,
+        )
+        assert result.get("success") is False
+        assert result["imt_mm"] is None
+        assert result["risk_level"] == "Unknown"
+        assert "error" in result
+        assert result["is_high_risk"] is False
