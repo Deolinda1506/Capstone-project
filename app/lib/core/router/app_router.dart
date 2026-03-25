@@ -14,10 +14,12 @@ import '../../screens/result/result_screen.dart';
 import '../../screens/referral/referral_screen.dart';
 import '../../screens/hospitals/hospitals_screen.dart';
 import '../../screens/patients/patients_screen.dart';
+import '../../screens/patients/patient_detail_screen.dart';
 import '../../screens/settings/settings_screen.dart';
 import '../../screens/dashboard/chw_dashboard.dart';
 import '../../screens/dashboard/clinician_dashboard.dart';
 import '../../screens/dashboard/admin_dashboard.dart';
+import '../l10n/l10n_extension.dart';
 import '../models/user_model.dart';
 import '../models/patient_model.dart';
 import '../models/user_role.dart';
@@ -125,12 +127,30 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
         builder: (context, state) => const PatientsScreen(),
       ),
       GoRoute(
+        path: '/patients/detail',
+        builder: (context, state) {
+          final patient = state.extra as PatientModel?;
+          final id = patient?.id?.trim();
+          if (patient == null || id == null || id.isEmpty) {
+            return Scaffold(
+              appBar: AppBar(),
+              body: Center(child: Text(context.l10n.t('error'))),
+            );
+          }
+          return PatientDetailScreen(patient: patient);
+        },
+      ),
+      GoRoute(
         path: '/referrals',
-        builder: (context, state) => const ReferralScreen(),
+        builder: (context, state) => ReferralScreen(
+          referringScanId: state.uri.queryParameters['scanId'],
+        ),
         routes: [
           GoRoute(
             path: 'hospitals',
-            builder: (context, state) => const HospitalsScreen(),
+            builder: (context, state) => HospitalsScreen(
+              referringScanId: state.uri.queryParameters['scanId'],
+            ),
           ),
         ],
       ),

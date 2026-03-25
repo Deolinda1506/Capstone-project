@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/l10n/l10n_extension.dart';
 import '../../core/services/auth_service.dart';
+import '../../core/services/referral_list_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page_appbar.dart';
 import '../../core/widgets/responsive_layout.dart';
@@ -29,6 +30,8 @@ class _ResultScreenState extends State<ResultScreen> {
   Map<String, dynamic>? _data;
   bool _loading = true;
   String? _error;
+  bool _referralCheckDone = false;
+  bool _referredForThisScan = false;
 
   @override
   void initState() {
@@ -43,6 +46,27 @@ class _ResultScreenState extends State<ResultScreen> {
       setState(() {
         _loading = false;
         _error = 'No scan ID';
+      });
+    }
+    _refreshReferralState();
+  }
+
+  Future<void> _refreshReferralState() async {
+    final id = widget.scanId.trim();
+    if (id.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _referralCheckDone = true;
+          _referredForThisScan = false;
+        });
+      }
+      return;
+    }
+    final referred = await ReferralListService().isScanReferred(id);
+    if (mounted) {
+      setState(() {
+        _referredForThisScan = referred;
+        _referralCheckDone = true;
       });
     }
   }
@@ -455,11 +479,42 @@ Please present this slip (or your Patient ID) when you arrive at the hospital.
                     ),
                   ),
                 ],
-                const SizedBox(height: 32),
-                FilledButton(
-                  onPressed: () => context.push('/referrals'),
-                  child: Text(risk.toLowerCase() == 'high' ? context.l10n.t('referToHospital') : context.l10n.t('viewReferralOptions')),
-                ),
+                if (widget.scanId.isNotEmpty && !_referralCheckDone) ...[
+                  const SizedBox(height: 32),
+                  const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                ] else if (!_referredForThisScan || widget.scanId.isEmpty) ...[
+                  const SizedBox(height: 32),
+                  FilledButton(
+                    onPressed: () async {
+                      final id = widget.scanId.trim();
+                      final path = id.isEmpty
+                          ? '/referrals/hospitals'
+                          : '/referrals/hospitals?scanId=${Uri.encodeQueryComponent(id)}';
+                      await context.push(path);
+                      if (context.mounted) await _refreshReferralState();
+                    },
+                    child: Text(
+                      risk.toLowerCase() == 'high'
+                          ? context.l10n.t('referToHospital')
+                          : context.l10n.t('viewReferralOptions'),
+                    ),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 24),
+                  Text(
+                    context.l10n.t('referralAlreadyRecorded'),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[700],
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ],
             ),
           ),

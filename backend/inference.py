@@ -85,6 +85,43 @@ def _preprocess_for_attention_unet(image_bytes: bytes) -> tuple[np.ndarray, np.n
     return img, orig_gray, h, w
 
 
+def _model_output_to_prob_and_class(pred_mask: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Normalize model output to probabilities in [0, 1] and threshold to a binary mask.
+    Handles sigmoid outputs, raw logits, or 0–255-style values.
+    """
+    p = np.asarray(pred_mask, dtype=np.float32).squeeze()
+    if p.ndim != 2:
+        raise ValueError(f"Expected 2D mask after squeeze, got shape {p.shape}")
+    pmin, pmax = float(np.min(p)), float(np.max(p))
+    if pmax > 1.0 + 1e-3:
+        if pmin >= -1e-6:
+            p = np.clip(p / 255.0, 0.0, 1.0)
+        else:
+            z = np.clip(p, -50.0, 50.0)
+            p = 1.0 / (1.0 + np.exp(-z))
+    elif pmin < -1e-3:
+        z = np.clip(p, -50.0, 50.0)
+        p = 1.0 / (1.0 + np.exp(-z))
+    binary = (p > 0.5).astype(np.uint8)
+    return p, binary
+
+
+def _mask256_to_original_hw(mask_256: np.ndarray, orig_h: int, orig_w: int) -> np.ndarray:
+    """
+    Map a 256×256 prediction back to unpadded original (orig_h, orig_w).
+    Must match _preprocess_for_attention_unet: pad to square max_dim, then resize to 256.
+    """
+    max_dim = max(orig_h, orig_w)
+    pad_h_before = (max_dim - orig_h) // 2
+    pad_w_before = (max_dim - orig_w) // 2
+    m = (np.asarray(mask_256) > 0).astype(np.uint8)
+    if m.shape != (256, 256):
+        m = cv2.resize(m, (256, 256), interpolation=cv2.INTER_NEAREST)
+    mask_square = cv2.resize(m, (max_dim, max_dim), interpolation=cv2.INTER_NEAREST)
+    return mask_square[pad_h_before : pad_h_before + orig_h, pad_w_before : pad_w_before + orig_w]
+
+
 def _get_interfaces_from_mask(mask):
     h, w = mask.shape
     inner_interface = np.full(w, np.nan)
@@ -151,35 +188,43 @@ def _imt_mm_from_mask(mask, spacing_mm_per_pixel):
 
 
 def _overlay_segmentation_on_image(original_gray: np.ndarray, mask_256: np.ndarray) -> bytes:
-    """Resize mask to original size and create RGB overlay (green = wall). Returns PNG bytes."""
+    """
+    Draw green semi-transparent wall overlay on the original grayscale image.
+    mask_256 is aligned to the padded-square 256 input; it is warped to match original_gray.
+    Uses BGR for OpenCV drawing so contours and fill agree. Returns PNG bytes.
+    """
     if original_gray.ndim != 2:
         original_gray = np.squeeze(original_gray)
-    if mask_256.ndim != 2:
-        mask_256 = np.squeeze(mask_256)
-    if original_gray.ndim != 2 or mask_256.ndim != 2:
-        raise ValueError(f"Expected 2D arrays, got original {original_gray.shape}, mask {mask_256.shape}")
+    if original_gray.ndim != 2:
+        raise ValueError(f"Expected 2D original_gray, got shape {original_gray.shape}")
     h, w = original_gray.shape
     if h == 0 or w == 0:
         raise ValueError(f"Invalid image dimensions: {h}x{w}")
-    mask_u8 = (np.asarray(mask_256) > 0).astype(np.uint8)
-    mask_resized = cv2.resize(mask_u8, (w, h), interpolation=cv2.INTER_NEAREST)
+    mask_hw = _mask256_to_original_hw(mask_256, h, w)
+    if mask_hw.shape != (h, w):
+        raise ValueError(f"Mask shape {mask_hw.shape} != original ({h}, {w})")
+
     orig_max = float(np.max(original_gray))
     if orig_max <= 1.0:
         orig_u8 = np.clip(original_gray * 255, 0, 255).astype(np.uint8)
     else:
         orig_u8 = np.clip(original_gray, 0, 255).astype(np.uint8)
-    rgb = np.stack([orig_u8, orig_u8, orig_u8], axis=-1)
-    green = np.array([0, 255, 0], dtype=np.uint8)
-    alpha = 0.65
-    wall = mask_resized > 0
+    bgr = cv2.cvtColor(orig_u8, cv2.COLOR_GRAY2BGR)
+    # BGR green (0, 255, 0); stronger tint + thick outline for clinical visibility on ultrasound
+    green_bgr = np.array([0, 255, 0], dtype=np.float32)
+    alpha = 0.72
+    wall = mask_hw > 0
+    blended = bgr.astype(np.float32)
     for c in range(3):
-        blended = (alpha * green[c] + (1 - alpha) * rgb[:, :, c]).astype(np.uint8)
-        rgb[:, :, c] = np.where(wall, blended, rgb[:, :, c])
-    contours, _ = cv2.findContours(mask_resized, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        ch = blended[:, :, c]
+        ch[wall] = alpha * green_bgr[c] + (1.0 - alpha) * ch[wall]
+    out = np.clip(blended, 0, 255).astype(np.uint8)
+    contours, _ = cv2.findContours(mask_hw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for cnt in contours:
-        cv2.drawContours(rgb, [cnt], -1, (0, 255, 0), 2)
-    bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-    ok, png = cv2.imencode(".png", bgr)
+        if cv2.contourArea(cnt) < 1:
+            continue
+        cv2.drawContours(out, [cnt], -1, (0, 255, 0), thickness=3, lineType=cv2.LINE_AA)
+    ok, png = cv2.imencode(".png", out)
     if not ok or png is None:
         raise ValueError("cv2.imencode failed")
     return png.tobytes()
@@ -205,7 +250,7 @@ def predict_imt(
     pred_mask = pred[0]
     if pred_mask.ndim == 3:
         pred_mask = pred_mask.squeeze()
-    pred_class = (pred_mask > 0.5).astype(np.uint8)
+    pred_prob, pred_class = _model_output_to_prob_and_class(pred_mask)
 
     pixel_spacing_source = (
         "default"
@@ -214,7 +259,7 @@ def predict_imt(
     )
     max_dim = max(orig_h, orig_w)
     effective_spacing = (max_dim / 256.0) * spacing_mm_per_pixel
-    foreground_prob = float(np.mean(pred_mask))
+    foreground_prob = float(np.mean(pred_prob))
     foreground_pixels = int(np.sum(pred_class))
 
     if foreground_pixels < MIN_FOREGROUND_PIXELS:

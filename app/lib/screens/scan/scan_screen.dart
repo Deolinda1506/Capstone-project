@@ -14,6 +14,14 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/app_page_appbar.dart';
 import '../../core/widgets/responsive_layout.dart';
 
+bool _isLikelyPatientUuid(String? s) {
+  if (s == null || s.isEmpty) return false;
+  return RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+    caseSensitive: false,
+  ).hasMatch(s.trim());
+}
+
 // Carotid scan capture + upload. Uses Image.memory on web (Image.file not supported).
 class ScanScreen extends StatefulWidget {
   final PatientModel? patient;
@@ -69,7 +77,7 @@ class _ScanScreenState extends State<ScanScreen> {
               createRes.data!['identifier'] as String? ??
               createRes.data!['id'] as String?;
         }
-      } else {
+      } else if (!_isLikelyPatientUuid(patientId)) {
         final createRes = await api.createPatient(
           identifier: patientId,
           name: patientName,
@@ -81,6 +89,7 @@ class _ScanScreenState extends State<ScanScreen> {
           patientId = createRes.data?['identifier'] as String? ?? patientId;
         }
       }
+      // If patientId is a server UUID, use it as-is for upload (POST /scans/upload resolves by id).
       if (patientId == null) {
         if (mounted)
           messenger.showSnackBar(
@@ -305,7 +314,6 @@ class _ScanScreenState extends State<ScanScreen> {
         context,
         title: context.l10n.t('carotidScan'),
         fallbackPath: '/patient/capture',
-        titleSpacing: 20,
       ),
       body: SafeArea(
         child: SingleChildScrollView(

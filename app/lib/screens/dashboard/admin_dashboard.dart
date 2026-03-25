@@ -25,11 +25,19 @@ class AdminDashboard extends StatelessWidget {
       appBar: AppBar(
         leading: navBackButton(context),
         title: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const AppLogo(height: 36, showInAppBar: true),
-            const SizedBox(width: 8),
-            Text(context.l10n.t('adminDashboard')),
+            Expanded(
+              child: Text(
+                context.l10n.t('adminDashboard'),
+                textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).appBarTheme.titleTextStyle,
+              ),
+            ),
           ],
         ),
         actions: [navNextButton(context)],

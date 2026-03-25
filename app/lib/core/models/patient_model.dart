@@ -1,5 +1,8 @@
 class PatientModel {
+  /// Server UUID when known (e.g. from GET /patients).
   final String? id;
+  /// Display identifier from server (e.g. CC-0001).
+  final String? identifier;
   final String? name;
   final int? age;
   final String? gender;
@@ -11,6 +14,7 @@ class PatientModel {
 
   const PatientModel({
     this.id,
+    this.identifier,
     this.name,
     this.age,
     this.gender,
@@ -24,6 +28,7 @@ class PatientModel {
   factory PatientModel.fromJson(Map<String, dynamic> json) {
     return PatientModel(
       id: json['id'] as String?,
+      identifier: json['identifier'] as String?,
       name: json['name'] as String?,
       age: json['age'] as int?,
       gender: json['gender'] as String?,
@@ -39,6 +44,7 @@ class PatientModel {
 
   Map<String, dynamic> toJson() => {
         'id': id,
+        'identifier': identifier,
         'name': name,
         'age': age,
         'gender': gender,
@@ -51,6 +57,7 @@ class PatientModel {
 
   PatientModel copyWith({
     String? id,
+    String? identifier,
     String? name,
     int? age,
     String? gender,
@@ -62,6 +69,7 @@ class PatientModel {
   }) =>
       PatientModel(
         id: id ?? this.id,
+        identifier: identifier ?? this.identifier,
         name: name ?? this.name,
         age: age ?? this.age,
         gender: gender ?? this.gender,

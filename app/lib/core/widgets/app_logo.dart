@@ -13,22 +13,26 @@ class AppLogo extends StatelessWidget {
     this.color,
   });
 
+  /// App bar: wordmark on the left, [text] right-aligned in the remaining title width.
   static Widget titleWithLogo(
     BuildContext context,
     String text, {
     double logoHeight = 36,
-    double spacing = 14,
   }) {
+    final titleStyle =
+        Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge;
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         AppLogo(height: logoHeight, showInAppBar: true, color: Colors.white),
-        SizedBox(width: spacing),
-        Flexible(
+        Expanded(
           child: Text(
             text,
+            textAlign: TextAlign.end,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).appBarTheme.titleTextStyle ?? Theme.of(context).textTheme.titleLarge,
+            style: titleStyle,
           ),
         ),
       ],

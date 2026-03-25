@@ -11,14 +11,19 @@ import '../../core/widgets/responsive_layout.dart';
 import '../referral/referral_map_widget.dart';
 
 class HospitalsScreen extends StatelessWidget {
-  const HospitalsScreen({super.key});
+  /// When the user opened this flow from a specific analysis result, record it so the result screen can hide repeat referral.
+  final String? referringScanId;
 
-  static Future<void> _addReferral(BuildContext context, HospitalInfo hospital) async {
+  const HospitalsScreen({super.key, this.referringScanId});
+
+  Future<void> _addReferral(BuildContext context, HospitalInfo hospital) async {
     final service = ReferralListService();
+    final sid = referringScanId?.trim();
     await service.addReferral(ReferralEntry(
       hospitalName: hospital.name,
       district: hospital.district,
       referredAt: DateTime.now(),
+      scanId: (sid != null && sid.isNotEmpty) ? sid : null,
     ));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

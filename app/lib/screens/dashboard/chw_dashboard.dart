@@ -26,14 +26,16 @@ class ChwDashboard extends StatelessWidget {
         leading: navBackButton(context),
         title: Row(
           mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const AppLogo(height: 36, showInAppBar: true),
-            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 context.l10n.t('appName'),
+                textAlign: TextAlign.end,
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
+                style: Theme.of(context).appBarTheme.titleTextStyle,
               ),
             ),
           ],

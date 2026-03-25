@@ -113,8 +113,21 @@ class _PatientsScreenState extends State<PatientsScreen> {
                           itemCount: _patients.length,
                           itemBuilder: (context, i) {
                             final p = _patients[i];
-                            final id = p['identifier'] as String? ?? p['id'] as String? ?? '-';
+                            final serverId = p['id'] as String? ?? '';
+                            final identifier = p['identifier'] as String? ?? '';
+                            final effectivePatientKey =
+                                serverId.isNotEmpty ? serverId : identifier;
+                            final title = identifier.isNotEmpty
+                                ? identifier
+                                : (serverId.isNotEmpty ? serverId : '-');
                             final facility = p['facility'] as String? ?? '';
+                            final model = PatientModel(
+                              id: effectivePatientKey.isNotEmpty ? effectivePatientKey : null,
+                              identifier: identifier.isNotEmpty ? identifier : null,
+                              name: p['name'] as String?,
+                              age: p['age'] as int?,
+                              email: p['email'] as String?,
+                            );
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
@@ -123,12 +136,15 @@ class _PatientsScreenState extends State<PatientsScreen> {
                                   child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimaryContainer),
                                 ),
                                 title: Text(
-                                  id,
+                                  title,
                                   style: const TextStyle(fontWeight: FontWeight.w600),
                                 ),
                                 subtitle: facility.isNotEmpty ? Text(facility) : null,
                                 trailing: const Icon(Icons.chevron_right),
-                                onTap: () => context.push('/scan', extra: PatientModel(id: id)),
+                                onTap: () {
+                                  if (effectivePatientKey.isEmpty) return;
+                                  context.push('/patients/detail', extra: model);
+                                },
                               ),
                             );
                           },

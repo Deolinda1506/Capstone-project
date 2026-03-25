@@ -10,14 +10,9 @@ PreferredSizeWidget appPageAppBar(
   String fallbackPath = '/',
   List<Widget>? actions,
   Widget? leading,
-  double titleSpacing = 14,
 }) {
   return AppBar(
-    title: AppLogo.titleWithLogo(
-      context,
-      title,
-      spacing: titleSpacing,
-    ),
+    title: AppLogo.titleWithLogo(context, title),
     leading: leading ??
         IconButton(
           icon: const Icon(Icons.arrow_back),

@@ -21,9 +21,25 @@ String? _nextPath(String location) {
 }
 
 String? _prevPath(String location) {
-  // Analyses, Patients, Referrals are reached from Settings - back goes to settings
-  if (location.startsWith('/analyses') || location.startsWith('/patients') || location.startsWith('/referrals')) {
-    return '/settings';
+  // Referrals: opened from home dashboard — back goes home (not Settings tab).
+  if (location.startsWith('/referrals/')) {
+    return '/referrals';
+  }
+  if (location == '/referrals') {
+    return '/';
+  }
+  // Analyses & patients: opened from home dashboard — back goes home (not Settings).
+  if (location.startsWith('/analyses/')) {
+    return '/analyses';
+  }
+  if (location == '/analyses') {
+    return '/';
+  }
+  if (location.startsWith('/patients/')) {
+    return '/patients';
+  }
+  if (location == '/patients') {
+    return '/';
   }
   final idx = _tabIndex(location);
   if (idx == null || idx <= 0) return null;

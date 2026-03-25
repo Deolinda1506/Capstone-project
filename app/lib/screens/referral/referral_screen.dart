@@ -9,7 +9,10 @@ import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/responsive_layout.dart';
 
 class ReferralScreen extends StatefulWidget {
-  const ReferralScreen({super.key});
+  /// Carried from the analysis result screen so choosing a hospital records this scan as referred.
+  final String? referringScanId;
+
+  const ReferralScreen({super.key, this.referringScanId});
 
   @override
   State<ReferralScreen> createState() => _ReferralScreenState();
@@ -56,7 +59,15 @@ class _ReferralScreenState extends State<ReferralScreen> {
         ),
       ),
       floatingActionButton: FilledButton.icon(
-        onPressed: () => context.push('/referrals/hospitals'),
+        onPressed: () {
+          final id = widget.referringScanId?.trim();
+          final suffix = (id != null && id.isNotEmpty)
+              ? '?scanId=${Uri.encodeQueryComponent(id)}'
+              : '';
+          context.push('/referrals/hospitals$suffix').then((_) {
+            if (mounted) _loadReferrals();
+          });
+        },
         icon: const Icon(Icons.add),
         label: Text(context.l10n.t('findHospitals')),
         style: FilledButton.styleFrom(

@@ -40,12 +40,12 @@ Use this template for your report (Testing Results, Analysis, Discussion, Recomm
 **Mapping implementation (CarotidCheck/StrokeLink) to proposal objectives:**
 
 ### Objective 1: Literature review and technical baselines
-- **Achieved:** Swin-UNETR architecture selected; Momot dataset used for training; IMT thresholds defined (High ≥3.5 mm, Moderate ≥3.0 mm, Low &lt;3.0 mm); CLAHE and DWT in preprocessing pipeline.
+- **Achieved:** Attention U-Net (vs ViT) selected for deployment; Momot dataset used for training; IMT thresholds aligned with deployed `backend/inference.py`; training uses augmentation in the ML pipeline; production inference uses OpenCV preprocessing in `backend/inference.py` (decode, pad, resize 256×256).
 - **Status:** Met.
 
 ### Objective 2: Develop the cloud-integrated solution
-- **Image-Processing Engine:** CLAHE (Contrast Limited Adaptive Histogram Equalization) and optional DWT in `backend/preprocessing.py`.
-- **FastAPI Backend:** Hosts Swin-UNETR model; endpoints for patients, scans, auth, high-risk referrals.
+- **Image-Processing Engine:** Implemented in `backend/inference.py` (decode, square pad, resize to 256×256, normalization). Training-time cleaning/augmentation remains in `ML/carotid` / notebooks as needed.
+- **FastAPI Backend:** Hosts Attention U-Net inference; endpoints for patients, scans, auth, high-risk referrals.
 - **Mobile Interface:** Flutter app for CHWs — patient registration, scan upload, real-time risk stratification, referral list, hospital dashboard.
 - **Status:** Met.
 
