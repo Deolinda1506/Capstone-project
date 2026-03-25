@@ -62,6 +62,22 @@ uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 - **Health:** http://localhost:8000/health  
 - **ML status:** http://localhost:8000/ml-status  
 
+**Backend unit tests (pytest):** from the repo root, with dependencies installed (`pip install -r backend/requirements.txt` or API-only plus `pytest`):
+
+```bash
+python3 -m pytest tests/ -v
+```
+
+**Flutter tests:** from `app/`:
+
+```bash
+cd app && flutter test
+# optional integration_test (needs a device target, e.g. macOS desktop — not web):
+cd app && flutter test -d macos integration_test/smoke_test.dart
+```
+
+On macOS you may see `Failed to foreground app; open returned 1` while tests still **pass**—that only means the runner could not bring the window to the front; the run itself succeeded.
+
 **Key endpoints (Swagger):**
 - [Create patient](http://localhost:8000/docs#/patients/create_patient_patients_post) — `POST /patients`
 - [Upload scan & predict](http://localhost:8000/docs#/scans/upload_scan_image_with_prediction) — `POST /scans/upload` (patient_id + file)  

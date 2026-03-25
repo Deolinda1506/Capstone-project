@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -30,6 +32,9 @@ class _CarotidCheckAppState extends State<CarotidCheckApp> {
   void initState() {
     super.initState();
     _authService = AuthService();
+    // Reload saved auth token/user from secure storage on app start.
+    // This prevents being forced to register/login on every restart.
+    unawaited(_authService.init());
     _syncService = SyncService();
     _localeProvider = LocaleProvider();
     _themeProvider = ThemeProvider();

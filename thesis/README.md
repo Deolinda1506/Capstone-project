@@ -32,7 +32,8 @@ BSc. in Software Engineering | Gnon Deolinda Bio Bogore | Supervisor: Tunde Isia
 - Figure 5.1: `figures/figure-5.1-dice-comparison.png` (source: `figure-5.1-dice-comparison.svg`) — Dice bar chart ViT vs. Attention U-Net  
 - Figure 5.2: `figures/figure-5.2-inference-latency.png` (source: `figure-5.2-inference-latency.svg`) — inference latency line chart; edit SVG then re-rasterize or use `plot-figure-5.2-latency.py` with matplotlib  
 - Figure 5.3: `figures/figure-5.3-risk-distribution.png` (source: `figure-5.3-risk-distribution.svg`) — risk bar chart; regenerate from DB: `PYTHONPATH=. python3 scripts/render_figure_5_3_from_db.py`  
-- Figures 3.x, 4.x, other 5.x: embed screenshots and diagrams when building the final PDF  
+- Figure 4.7: `figures/figure-4.7-web-dashboard.png` — clinician **web dashboard** Overview (deployed dashboard screenshot)  
+- Figures 3.x, 4.1–4.6, other 4.x: embed screenshots and diagrams when building the final PDF  
 
 ---
 

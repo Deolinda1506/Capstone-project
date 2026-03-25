@@ -7,17 +7,16 @@
 | Field | Text |
 |--------|------|
 | **Project title** | CarotidCheck: AI-Driven Carotid Ultrasound Analysis for Enhanced Stroke Triage in Rwanda |
-| **Program name** | Bachelor of Software Engineering |
 | **Student name** | Bio Bogore Gnon Deolinda |
-| **Course** | *(e.g. Capstone / course code as on your ALU transcript—fill in)* |
+| **Program** | Bachelor of Software Engineering, African Leadership University, Kigali, Rwanda |
 | **Supervisor** | Tunde Isiaq Gbadamosi |
-| **Year** | 2026 |
+| **Submission date** | January 2026 |
 
 ---
 
 ## DECLARATION
 
-I, Gnon Deolinda Bio Bogore, declare that this Project Proposal is my original work, except where otherwise stated, and that all external sources have been properly acknowledged and cited. This work has not been submitted for the award of any degree or for any similar purpose at any other university or institution.
+I, Gnon Deolinda Bio Bogore, declare that this **capstone project report** is my original work, except where otherwise stated, and that all external sources have been properly acknowledged and cited. This work has not been submitted for the award of any degree or for any similar purpose at any other university or institution.
 
 **Deolinda Bio Bogore**  
 07/03/2026
@@ -29,7 +28,9 @@ I, Gnon Deolinda Bio Bogore, declare that this Project Proposal is my original w
 The undersigned certifies that he has read and hereby recommended for acceptance of African Leadership University a report entitled *CarotidCheck: AI-Driven Carotid Ultrasound Analysis for Enhanced Stroke Triage in Rwanda*.
 
 Signature ………………………………  Date ………………………………  
+
 Prof/Dr./Mrs./Miss/Mr. Name of the Supervisor  
+
 Faculty, Bachelor of Software Engineering, ALU
 
 ---
@@ -46,7 +47,7 @@ I sincerely thank my supervisor, **Tunde Isiaq Gbadamosi**, for guidance through
 
 ## Abstract
 
-Stroke has become the third leading cause of death in Rwanda, with a median time from symptom onset to hospital arrival of 72 hours—far exceeding the critical 4.5-hour window for effective intervention. This “treatment vacuum” is driven by the lack of objective diagnostic tools at the community level and a fragmented referral chain. This research proposed and implemented **CarotidCheck**, a cloud-integrated software solution that uses artificial intelligence to automate carotid artery segmentation and Intima-Media Thickness (IMT) measurement from ultrasound images. The system evaluated Vision Transformer (ViT) and Attention U-Net architectures on the Momot (2022) dataset, selecting Attention U-Net for deployment due to superior validation performance (Dice ~0.94, Mean IoU ~0.88). CarotidCheck provides dual-layer diagnostics—early-stage risk (IMT) and advanced blockage (stenosis). **Clinician awareness of pending high-risk referrals is provided in the web dashboard** through an in-app notification bell and badge: the dashboard calls the backend API on a timer and counts pending high-risk cases. A FastAPI backend, Flutter mobile app for community health workers, and React web dashboard for clinicians enable end-to-end workflow from scan upload to hospital-side referral review. Results demonstrate that CarotidCheck can support objective, image-driven stroke triage at the community level, aligning with Rwanda’s Ministry of Health 4×4 Reform. Recommendations include field pilot validation, lumen segmentation for direct stenosis calculation, and integration of ultrasound metadata for improved IMT calibration.
+Stroke has become the third leading cause of death in Rwanda, with a median time from symptom onset to hospital arrival of 72 hours, far exceeding the critical 4.5-hour window for effective intervention. This “treatment vacuum” is driven by the lack of objective diagnostic tools at the community level and a fragmented referral chain. **Objectives** were to compare deep learning architectures for carotid segmentation, deploy the best model in a community-to-hospital workflow, and evaluate technical performance and referral visibility for clinicians. **Methodology** followed iterative Agile sprints: preprocessing and training on the Momot (2022) dataset, model comparison (ViT vs. Attention U-Net), integration into a FastAPI backend with PostgreSQL, a Flutter app for community health workers, a React web dashboard for clinicians, and structured testing from unit through acceptance. This research **proposed and implemented CarotidCheck**, a cloud-integrated solution that automates carotid artery segmentation and Intima-Media Thickness (IMT) measurement from ultrasound images. The system evaluated both architectures on Momot (2022), selecting Attention U-Net for deployment due to superior validation performance (Dice ~0.94, Mean IoU ~0.88). CarotidCheck provides dual-layer diagnostics—early-stage risk (IMT) and advanced blockage (stenosis). **Clinician awareness of pending high-risk referrals is provided in the web dashboard** through an in-app notification bell and badge: the dashboard calls the backend API on a timer and counts pending high-risk cases. On the deployed stack, inference latency can exceed the 5 s design target under free-tier cloud hosting (Chapter Five). **Conclusions:** CarotidCheck can support objective, image-driven stroke triage at the community level, aligned with Rwanda’s Ministry of Health 4×4 Reform. **Recommendations** include field pilot validation, lumen segmentation for direct stenosis calculation, and integration of ultrasound metadata for improved IMT calibration.
 
 **Keywords:** Carotid ultrasound, Intima-Media Thickness, carotid triage, Attention U-Net, Vision Transformer, Rwanda, cloud-integrated diagnostics, NASCET
 
@@ -54,105 +55,128 @@ Stroke has become the third leading cause of death in Rwanda, with a median time
 
 ## Table of Contents
 
-*(**Word:** apply **Heading 1** to each `CHAPTER …` line and **Heading 2** / **Heading 3** to numbered sections, then **References → Table of Contents → Automatic Table** so page numbers fill in. The list below is the same structure for quick reference or Google Docs.)*
+*Page numbers below match your **Word** automatic Table of Contents (**body pages 1–39**). Front matter (title page, declaration, certification, abstract, lists) uses your template’s numbering separately. **References → Table of Contents → Update** after edits. An older Turnitin PDF used different pagination; treat **Word** as authoritative for submission.*
 
-**Preliminary pages** *(roman numerals in the final PDF, separate from chapter page numbers)*  
-Cover page · Declaration · Certification · Dedication and Acknowledgement · Abstract · Table of Contents · List of Tables · List of Figures · List of Acronyms/Abbreviations  
+**CHAPTER ONE: INTRODUCTION** — **p. 1–9**
 
-- **CHAPTER ONE: INTRODUCTION**  
-  - 1.1 Introduction and Background  
-  - 1.2 Problem statement  
-  - 1.3 Project’s main objective  
-    - 1.3.1 List of the specific objectives  
-  - 1.4 Research questions  
-  - 1.5 Project scope  
-  - 1.6 Significance and Justification  
-  - 1.7 Research Budget  
-  - 1.8 Research Timeline  
+| Section | p. |
+|---------|--|
+| 1.1 Introduction and Background | 1 |
+| 1.2 Problem Statement | 4 |
+| 1.3 Project’s Main Objective | 5 |
+| 1.3.1 Specific Objectives | 5 |
+| 1.4 Research Questions | 6 |
+| 1.5 Project Scope | 6 |
+| 1.6 Significance and Justification | 8 |
+| 1.7 Research Budget | 8 |
+| 1.8 Research Timeline | 9 |
 
-- **CHAPTER TWO: LITERATURE REVIEW**  
-  - 2.1 Introduction  
-  - 2.2 Historical Background of the Research Topic  
-  - 2.3 Overview of Existing System  
-  - 2.4 Review of Related Work  
-    - 2.4.1 Summary of Reviewed Literature  
-  - 2.5 Strengths and Weaknesses of the Existing System(s)  
-  - 2.6 General Comments  
+**CHAPTER TWO: LITERATURE REVIEW** — **p. 10–17**
 
-- **CHAPTER THREE: SYSTEM ANALYSIS AND DESIGN**  
-  - 3.1 Introduction  
-  - 3.2 Research Design (including the SDLC model used)  
-    - 3.2.1 Dataset and Dataset Description  
-  - 3.3 Functional and Non-functional Requirements  
-    - 3.3.1 Proposed Model Diagram  
-  - 3.4 System Architecture  
-  - 3.5 Flow Chart, Use Case Diagram, Sequence Diagram and Other Diagrams  
-  - 3.6 Development Tools  
+| Section | p. |
+|---------|--|
+| 2.1 Introduction | 10 |
+| 2.2 Historical Background of the Research Topic | 10 |
+| 2.3 Overview of Existing Systems | 12 |
+| 2.4 Review of Related Work | 13 |
+| 2.4.1 Summary of Reviewed Literature | 14 |
+| 2.5 Strengths and Weaknesses of Existing Systems | 15 |
+| 2.6 General Comments | 17 |
 
-- **CHAPTER FOUR: SYSTEM IMPLEMENTATION AND TESTING**  
-  - 4.1 Implementation and coding  
-    - 4.1.1 Introduction  
-    - 4.1.2 Description of implementation tools and technology  
-  - 4.2 Graphical view of the project  
-    - 4.2.1 Screenshots with description  
-  - 4.3 Testing  
-    - 4.3.1 Introduction  
-    - 4.3.2 Objective of testing  
-    - 4.3.3 Unit testing outputs  
-    - 4.3.4 Validation testing outputs  
-    - 4.3.5 Integration testing outputs  
-    - 4.3.6 Functional and system testing results  
-    - 4.3.7 Acceptance testing report  
+**CHAPTER THREE: SYSTEM ANALYSIS AND DESIGN** — **p. 18–23**
 
-- **CHAPTER FIVE: THE DESCRIPTION OF THE RESULTS / SYSTEM**  
-  - 5.1 Description of Results  
-    - 5.1.1 Model comparison (ViT vs. Attention U-Net)  
-    - 5.1.2 Inference latency  
-    - 5.1.3 Risk level distribution  
-  - 5.2 Discussion  
-    - 5.2.1 Connection to Research Questions  
-    - 5.2.2 Implications  
-    - 5.2.3 Limitations  
+| Section | p. |
+|---------|--|
+| 3.1 Introduction | 18 |
+| 3.2 Research Design (including SDLC model) | 18 |
+| 3.2.1 Dataset and Dataset Description | 19 |
+| 3.3 Functional and Non-Functional Requirements | 20 |
+| 3.4 Proposed Model Diagram | 21 |
+| 3.5 System Architecture | 21 |
+| 3.6 Flow Chart, Use Case Diagram, Sequence Diagram and Others | 22 |
+| 3.7 Development Tools | 23 |
 
-- **CHAPTER SIX: CONCLUSIONS AND RECOMMENDATIONS**  
-  - 6.1 Conclusions  
-  - 6.2 Recommendations  
-    - 6.2.1 For field pilot validation  
-    - 6.2.2 For technical improvement  
-    - 6.2.3 For future research  
-  - 6.3 Limitations of the Study  
+**CHAPTER FOUR: SYSTEM IMPLEMENTATION AND TESTING** — **p. 24–30**
 
-- **REFERENCES**  
+| Section | p. |
+|---------|--|
+| 4.1 Implementation and Coding | 24 |
+| 4.1.1 Introduction | 24 |
+| 4.1.2 Description of Implementation Tools and Technology | 24 |
+| 4.2 Graphical View of the Project | 25 |
+| 4.2.1 Screenshots with Description | 25 |
+| 4.3 Testing | 28 |
+| 4.3.1 Introduction | 28 |
+| 4.3.2 Objective of Testing | 28 |
+| 4.3.3 Unit Testing Outputs | 28 |
+| 4.3.4 Validation Testing Outputs | 29 |
+| 4.3.5 Integration Testing Outputs | 29 |
+| 4.3.6 Functional and System Testing Results | 30 |
+| 4.3.7 Acceptance Testing Report | 30 |
+
+**CHAPTER FIVE: DESCRIPTION OF THE RESULTS / SYSTEM** — **p. 31–35**
+
+| Section | p. |
+|---------|--|
+| 5.1 Description of Results | 31 |
+| 5.1.1 Model Comparison Results (ViT vs. Attention U-Net) | 31 |
+| 5.1.2 Inference Latency | 32 |
+| 5.1.3 Risk Level Distribution | 33 |
+| 5.2 Discussion | 34 |
+| 5.2.1 Connection to Research Questions | 34 |
+| 5.2.2 Implications | 35 |
+| 5.2.3 Limitations | 35 |
+
+**CHAPTER SIX: CONCLUSIONS AND RECOMMENDATIONS** — **p. 36–38**
+
+| Section | p. |
+|---------|--|
+| 6.1 Conclusions | 36 |
+| 6.2 Recommendations | 37 |
+| 6.2.1 For Field Pilot Validation | 37 |
+| 6.2.2 For Technical Improvement | 37 |
+| 6.2.3 For Future Research | 38 |
+| 6.3 Limitations of the Study | 38 |
+
+**REFERENCES** — **p. 39**
 
 ---
 
 ## List of Tables
 
-- Table 3.1: Development tools — *see Section 3.6*  
-- Table 4.1: Key implementation modules — *see Section 4.1.2*  
-- *(In Word, add formal captions (Insert → Caption) and update this list with final numbers and page numbers.)*
+| Table | Title / location | p. |
+|-------|------------------|--|
+| *(inline)* | Development tools listing (§3.7) | 23 |
+| *(inline)* | Key implementation modules (§4.1.2) | 24 |
+
+*(In Word, use Insert → Caption for formal “Table X” labels and refresh page numbers.)*
 
 ---
 
 ## List of Figures
 
-- Figure 1.1: CarotidCheck 3-Month Research Project Gantt Chart (Janvier–Mars 2026)  
-- Figure 3.1: CarotidCheck UML Class Diagram  
-- Figure 3.2: Client-Server Architecture  
-- Figure 3.3: CarotidCheck Entity-Relationship Diagram (ERD)  
-- Figure 4.1: Registration Screen  
-- Figure 4.2: Dashboard  
-- Figure 4.3: Patient Registration  
-- Figure 4.4: Scan Capture  
-- Figure 4.5: Analysis Result  
-- Figure 4.6: Analyses and Referrals  
-- Figure 5.1: Validation Dice Coefficient (ViT vs. Attention U-Net)  
-- Figure 5.2: Inference Latency Over Time  
-- Figure 5.3: Risk Level Distribution  
+| Figure | Title | p. |
+|--------|-------|--|
+| 1.1 | Project Gantt Chart and Research Timeline | 9 |
+| 3.1 | CarotidCheck UML Class Diagram | 21 |
+| 3.2 | Client-Server Architecture | 21 |
+| 3.3 | CarotidCheck Entity-Relationship Diagram (ERD) | 22 |
+| 4.1 | Registration Screen | 25 |
+| 4.2 | Dashboard | 25 |
+| 4.3 | Patient Registration | 26 |
+| 4.4 | Scan Capture | 26 |
+| 4.5 | Analysis Result | 27 |
+| 4.6 | Analyses and Referrals | 27 |
+| 4.7 | Clinician Web Dashboard | 27 |
+| 5.1 | Validation Dice Coefficient (ViT vs. Attention U-Net) | 31 |
+| 5.2 | Inference Latency Over Time | 32 |
+| 5.3 | Risk Level Distribution | 33 |
+
+*(Figure pages align with §1.8 and Chapter 4–5 sections in your **Word** TOC; adjust if a figure moves to the next page.)*
 
 ---
 
-## List of Acronyms / Abbreviations
+## List of Acronyms/Abbreviations
 
 | Acronym | Meaning |
 |--------|---------|
@@ -243,16 +267,14 @@ The successful implementation of CarotidCheck transforms carotid triage in Rwand
 
 For this academic project phase, direct software infrastructure spending was **USD $0** because cloud hosting (FastAPI backend, mobile interface support services, PostgreSQL on Render) and UI tooling (Figma) were run on free tiers.
 
-The table below presents the **planned/estimated budget** for pilot and scale-ready operation:
+The planned/estimated budget for pilot and scale-ready operation includes:
 
 - **Logistics and field testing** (transport, mobile data bundles, translation, participant stipends): **USD $160** (estimated)
 - **Contingency fund** (unexpected technical requirements, hardware maintenance, API overages): **USD $90** (estimated)
 
-This gives a total **estimated budget of USD $250**, while **actual spending during the implementation phase was USD $0**.
-
 ## 1.8 Research Timeline
 
-*See Figure 1.1: CarotidCheck 3-Month Research Project Gantt Chart (Janvier–Mars 2026).*
+*See Figure 1.1: Project Gantt Chart and Research Timeline (Janvier–Mars 2026).*
 # CHAPTER TWO: LITERATURE REVIEW
 
 ## 2.1 Introduction
@@ -311,7 +333,7 @@ The evaluation of existing stroke diagnostic software highlights a significant g
 
 The research and systems reviewed in this chapter highlight a critical gap in current stroke detection approaches, particularly in rural and resource-limited settings. Existing platforms, such as PINGS and the Stroke Riskometer™, primarily rely on self-reported data or observable clinical symptoms like facial drooping. However, these indicators typically emerge only after a stroke has occurred, limiting their effectiveness for early, pre-clinical detection.
 
-Recent advancements in artificial intelligence (AI), particularly in medical image analysis, offer a promising solution. Work such as Megahed et al. (2025) shows that advanced models, including Vision Transformers (ViTs), can outperform traditional methods in analysing low-quality ultrasound images by capturing global contextual features and reducing noise effects. These models enable accurate, automated extraction of anatomical biomarkers, including carotid artery structure and Intima–Media Thickness (IMT), which are critical for early stroke risk assessment. When trained on curated carotid ultrasound datasets, such systems can achieve precision and consistency comparable to expert clinical evaluation.
+Recent advancements in artificial intelligence (AI), particularly in medical image analysis, offer a promising solution. Studies through 2025–2026 (Megahed et al., 2025) show that advanced models, including Vision Transformers (ViTs), can outperform traditional methods in analysing low-quality ultrasound images by capturing global contextual features and reducing noise effects. These models enable accurate, automated extraction of anatomical biomarkers, including carotid artery structure and Intima–Media Thickness (IMT), which are critical for early stroke risk assessment. When trained on curated carotid ultrasound datasets, such systems can achieve precision and consistency comparable to expert clinical evaluation.
 
 The literature thus supports the need for a fast, objective, and connected carotid triage system tailored to decentralised healthcare environments. CarotidCheck addresses this need by integrating AI-driven ultrasound analysis with a cloud-based architecture capable of real-time clinical decision support. By detecting early arterial abnormalities and enabling immediate communication with nearby healthcare facilities, the system shifts stroke care from reactive symptom management to proactive risk detection.
 
@@ -345,7 +367,7 @@ The Momot (2022) Common Carotid Artery Ultrasound Dataset was used for training 
 - **Original Resolution:** 709×749 pixels.  
 - **Preprocessing:** Images padded to square, resized to 256×256, and augmented with Albumentations.
 
-## 3.3 Functional and Non-functional Requirements
+## 3.3 Functional and Non-Functional Requirements
 
 ### Functional Requirements
 
@@ -355,7 +377,7 @@ The system must allow Community Health Workers (CHWs) to register and log in, wi
 
 Inference latency is **targeted** below **5 seconds** per scan for responsive triage (**design goal**). On **CPU-only, free-tier cloud** hosts, measured end-to-end inference often **exceeds** that target (see §5.1.2); paid tiers, GPU inference, or regional edge deployment are expected to improve times. The API must remain responsive under normal load. Data privacy is ensured by linking images to a unique UUID only, in compliance with Rwanda Law No. 058/2021. Offline login is supported through cached credentials after the first successful online login. The Flutter app must run on Android, iOS, and Web.
 
-### 3.3.1 Proposed Model Diagram
+## 3.4 Proposed Model Diagram
 
 The CarotidCheck system is designed using Object-Oriented principles. A medical organization (Hospital or Clinic) is the top-level entity; an admin registers the organization and adds clinicians and CHWs. A Service Layer and Strategy-like pattern allow the segmentation model (ViT or Attention U-Net) to be swapped without changing the rest of the application.
 
@@ -431,7 +453,7 @@ SegmentationModel <|.. AttentionUNetModel
 SegmentationModel <|.. ViTModel
 ```
 
-## 3.4 System Architecture
+## 3.5 System Architecture
 
 The CarotidCheck platform follows a **Client-Server Architecture**. The Flutter mobile app serves CHWs in the field; a separate React web dashboard serves clinicians at the hospital. Authentication can be cached locally after a first successful online login, allowing CHWs to log in offline; however, inference (AI processing) is a cloud-only task that requires an active internet connection. This design keeps the mobile app lightweight while ensuring all segmentation, IMT calculation, and risk classification run on high-performance cloud servers.
 
@@ -476,7 +498,7 @@ flowchart LR
   Alerts --> Clinician
 ```
 
-## 3.5 Flow Chart, Use Case Diagram, Sequence Diagram and Other Diagrams
+## 3.6 Flow Chart, Use Case Diagram, Sequence Diagram and Others
 
 This section presents the core system diagrams used in Chapter Three. In this report revision, it includes the database-level structure and privacy-by-design view through the ERD. Images sent to the FastAPI backend are stripped of the patient's name and associated with a unique UUID only. This design complies with Rwanda Law No. 058/2021 relating to the protection of personal data and privacy. The schema includes an `ORGANIZATIONS` entity; users (admins, clinicians, CHWs) belong to an organization, and admins invite clinicians within their organization.
 
@@ -535,7 +557,7 @@ erDiagram
 ```
 
 
-## 3.6 Development Tools
+## 3.7 Development Tools
 
 | Tool | Role |
 |------|------|
@@ -548,6 +570,7 @@ erDiagram
 | **Database** | PostgreSQL (production), SQLite (development) |
 | **Cloud Hosting** | Render (Free Tier) |
 | **UI Prototyping** | Figma |
+
 # CHAPTER FOUR: SYSTEM IMPLEMENTATION AND TESTING
 
 ## 4.1 Implementation and coding
@@ -582,6 +605,9 @@ The following screenshots illustrate key system functionalities. Each feature co
 - **Figure 4.4: Scan Capture** — Enables image capture or upload of carotid ultrasound scans.  
 - **Figure 4.5: Analysis Result** — Displays IMT (mm), risk level, stenosis percentage, and AI segmentation overlay.  
 - **Figure 4.6: Analyses and Referrals** — Shows past scan results and supports referral tracking.  
+- **Figure 4.7: Clinician Web Dashboard (Overview)** — React + Vite dashboard ([`carotidcheck-dashboard.onrender.com`](https://carotidcheck-dashboard.onrender.com/dashboard)): dark-theme **Overview** with **risk distribution** (pie chart: High / Moderate / Low), **scans per day (last 14 days)** bar chart, **inference latency** summary, global search, **notification bell with badge** (pending items), **All analyses** table (patient, IMT, risk, referral queue, date), and **High-risk referrals** cards with pending/reviewed filters. Clinician-facing complement to the CHW Flutter app.
+
+![Figure 4.7 — CarotidCheck clinician web dashboard: Overview (risk distribution, analyses table, high-risk referrals, notifications)](figures/figure-4.7-web-dashboard.png)
 
 ## 4.3 Testing
 
@@ -664,7 +690,8 @@ The system maintained acceptable response time and performance under normal usag
 ### 4.3.7 Acceptance testing report
 
 Acceptance testing was conducted based on real user workflows, including CHW login, patient management, scan capture, and result review. The system met all key requirements, including carotid wall segmentation, IMT calculation, risk classification, and **clinician visibility of referrals through the web dashboard** (including the in-app notification indicator driven by the API). The solution is considered ready for pilot deployment, pending real-world validation and user feedback.
-# CHAPTER FIVE: THE DESCRIPTION OF THE RESULTS / SYSTEM
+
+# CHAPTER FIVE: DESCRIPTION OF THE RESULTS / SYSTEM
 
 This chapter follows the capstone reporting pattern illustrated in the course guide: for each outcome, the **problem** context is stated, **results** are reported with numbers where available, and each figure is labeled with **graph type** and a **description** of axes and interpretation (similar to the water-distribution platform and AR/VR examples).
 
@@ -706,12 +733,11 @@ In that sample, **mean ≈ 6.6 s** and **all runs exceeded the 5 s design target
 
 **Description:** The x-axis is **sequential inference request number** (or time during a load test); the y-axis is **inference time in seconds**. The dashed **5 s** line is the **design target**. The plotted series matches the **min / mean / max** of the *n* = 6 snapshot (order of points is reconstructed). Update from [`GET /latency`](https://carotidcheck-api.onrender.com/latency) `samples_sec` or per-response `inference_time_sec`, then refresh `thesis/figures/figure-5.2-inference-latency.svg` / PNG or use `plot-figure-5.2-latency.py`.
 
-Stakeholders need to see how often the system assigns **Low**, **Moderate**, and **High** risk—not only single-case screenshots—so that skew (e.g. mostly low risk in a healthy cohort) is visible and interpretable.
-
-**Results:** The pipeline classifies using IMT thresholds aligned with `backend/inference.py` (default: **Low** IMT &lt; 0.9 mm, **Moderate** 0.9–1.2 mm, **High** &gt; 1.2 mm). **Figure 5.3 is generated from stored analyses** (non-deleted scans with results): run **`PYTHONPATH=. python3 scripts/render_figure_5_3_from_db.py`** from the repo root (uses `DATABASE_URL` or default `d
 ### 5.1.3 Risk level distribution
 
-**Problem:** ata/carotidcheck.db`). If your **thesis machine only has empty local SQLite** but **production (Render) Postgres** holds the real scans, either set **`DATABASE_URL`** to the Render connection string for one run, or pass dashboard totals explicitly, e.g. **`--low 2 --moderate 1 --high 6`** when those match the **Overview → Risk distribution** pie chart. The script writes `thesis/figures/figure-5.3-risk-distribution.svg` and, on macOS, `.png`. Counts also appear via **`GET /scans/risk-distribution`**. For **Momot validation-set** histograms (not the app DB), use the ML notebook instead.
+**Problem:** Stakeholders need a clear view of how often the system assigns **Low**, **Moderate**, and **High** risk, so that skew (e.g. mostly low-risk in a healthy cohort) is visible and interpretable.
+
+**Results:** The pipeline classifies using IMT thresholds aligned with `backend/inference.py` (default: **Low** IMT &lt; 0.9 mm, **Moderate** 0.9–1.2 mm, **High** &gt; 1.2 mm). **Figure 5.3 is generated from stored analyses** (non-deleted scans with results): run **`PYTHONPATH=. python3 scripts/render_figure_5_3_from_db.py`** from the repo root (uses `DATABASE_URL` or default `data/carotidcheck.db`). If your **thesis machine only has empty local SQLite** but **production (Render) Postgres** holds the real scans, either set **`DATABASE_URL`** to the Render connection string for one run, or pass dashboard totals explicitly, e.g. **`--low 2 --moderate 1 --high 6`** when those match the **Overview → Risk distribution** pie chart. The script writes `thesis/figures/figure-5.3-risk-distribution.svg` and, on macOS, `.png`. Counts also appear via **`GET /scans/risk-distribution`**. For **Momot validation-set** histograms (not the app DB), use the ML notebook instead.
 
 **Figure 5.3: Risk level distribution**
 
@@ -742,6 +768,7 @@ Stakeholders need to see how often the system assigns **Low**, **Moderate**, and
 - The Momot dataset is predominantly from normal subjects; field validation with diverse pathologies is necessary.  
 - NASCET stenosis calculation requires dual-wall lumen segmentation. The system computes true NASCET when both walls are present; otherwise an IMT–stenosis correlation fallback may apply when only one wall is available.  
 - **Measured production latency** on free-tier cloud hosting can **exceed the 5 s design target** for every request in a small sample (e.g. mean **~6.6 s**, range **~5.9–8.2 s** for *n* = 6 from [`/latency`](https://carotidcheck-api.onrender.com/latency)). Paid hosting, GPU inference, model quantization, or keep-alive/warm-up strategies can mitigate this.  
+
 # CHAPTER SIX: CONCLUSIONS AND RECOMMENDATIONS
 
 ## 6.1 Conclusions

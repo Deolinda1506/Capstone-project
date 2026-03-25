@@ -1,4 +1,6 @@
 """IMT inference via Attention U-Net. Used by /predict and /scans/upload."""
+from __future__ import annotations
+
 import base64
 import logging
 import os
