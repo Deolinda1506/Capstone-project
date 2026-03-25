@@ -117,6 +117,7 @@ class ChwDashboard extends StatelessWidget {
                     color: AppTheme.riskModerate,
                     onTap: () => context.go('/referrals'),
                   ),
+                  SizedBox(height: MediaQuery.paddingOf(context).bottom + 88),
                 ],
               );
               },
