@@ -27,6 +27,19 @@ class EncoderBlock(layers.Layer):
         self.drop = layers.Dropout(self.dropout_rate)
         self.pool = layers.MaxPooling2D(2)
 
+    def build(self, input_shape):
+        # Required for Keras 3 / TF 2.2x so nested weights (BN gamma/beta/…) load from .keras files.
+        self.conv1.build(input_shape)
+        s1 = self.conv1.compute_output_shape(input_shape)
+        self.bn1.build(s1)
+        self.conv2.build(s1)
+        s2 = self.conv2.compute_output_shape(s1)
+        self.bn2.build(s2)
+        self.drop.build(s2)
+        if self.pooling:
+            self.pool.build(s2)
+        super().build(input_shape)
+
     def call(self, inputs, training=None):
         x = self.conv1(inputs)
         x = self.bn1(x, training=training)
@@ -118,6 +131,22 @@ class DecoderBlock(layers.Layer):
         self.conv2 = layers.Conv2D(self.filters, 3, padding="same", use_bias=False)
         self.bn2 = layers.BatchNormalization()
         self.drop = layers.Dropout(self.dropout_rate)
+
+    def build(self, input_shape):
+        g_shape, x_shape = input_shape[0], input_shape[1]
+        self.up.build(g_shape)
+        u_shape = self.up.compute_output_shape(g_shape)
+        uc, xc = u_shape[-1], x_shape[-1]
+        ch = (int(uc) + int(xc)) if uc is not None and xc is not None else None
+        concat_shape = (u_shape[0], u_shape[1], u_shape[2], ch)
+        self.conv1.build(concat_shape)
+        s1 = self.conv1.compute_output_shape(concat_shape)
+        self.bn1.build(s1)
+        self.conv2.build(s1)
+        s2 = self.conv2.compute_output_shape(s1)
+        self.bn2.build(s2)
+        self.drop.build(s2)
+        super().build(input_shape)
 
     def call(self, inputs, training=None):
         g, x = inputs

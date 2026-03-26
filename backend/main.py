@@ -234,13 +234,31 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     _ensure_postgres_schema()
     _ensure_sqlite_columns()
-    # Preload ML model so first /scans/upload is faster (avoids Swagger timeout)
-    try:
-        from backend.inference import load_model
-        load_model()
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("Could not preload ML model: %s. First scan may be slow.", e)
+    # Preload ML model so first /scans/upload is faster. On Render, skip by default so the
+    # process opens PORT before TensorFlow pushes deploy past the health-check window.
+    # Set SKIP_ML_PRELOAD=0 (or false/no) on Render to warm the model at startup once loads work.
+    def _skip_ml_preload() -> bool:
+        v = os.getenv("SKIP_ML_PRELOAD", "").strip().lower()
+        on_render = os.getenv("RENDER", "").strip().lower() == "true"
+        if on_render:
+            return v not in ("0", "false", "no")
+        return v in ("1", "true", "yes")
+
+    if not _skip_ml_preload():
+        try:
+            from backend.inference import load_model
+
+            load_model()
+        except Exception as e:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Could not preload ML model: %s. First scan may be slow.", e
+            )
+    else:
+        logging.getLogger(__name__).info(
+            "ML preload skipped (SKIP_ML_PRELOAD or RENDER); model loads on first inference."
+        )
 
     worker_task = None
     if alert_queue.is_enabled():

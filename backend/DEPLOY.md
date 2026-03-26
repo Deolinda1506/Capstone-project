@@ -18,9 +18,21 @@ Yes, you can deploy the backend. Follow this checklist.
 
 ### What the Blueprint does
 
-- **Build**: `pip install -r backend/requirements-api.txt` (lightweight, ~50 MB)
-- **Start**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+- **Build**: `pip install -r backend/requirements.txt` (includes TensorFlow for Attention U-Net)
+- **Start**: `sh -c 'exec uvicorn backend.main:app --host 0.0.0.0 --port "${PORT}"'`
 - **Env vars**: `DATABASE_URL` (from Postgres), `SECRET_KEY` (auto-generated), `DISABLE_AUTH=0`
+
+### Render troubleshooting
+
+**Port scan timeout / “no open ports detected”**
+
+- The service must listen on Render’s **`PORT`** (set automatically). The Blueprint uses `sh -c` so `"${PORT}"` is always expanded.
+- TensorFlow startup can be slow; the app **skips ML preload when `RENDER=true`** so `/health` comes up quickly. The model loads on the first scan or `/ml-status`. To warm the model at boot (after deploy works), set **`SKIP_ML_PRELOAD=0`** in the service environment.
+
+**`Could not preload ML model` / BatchNormalization “expected 4 variables, received 0”**
+
+- Use the **pinned TensorFlow range** in `backend/requirements.txt` (below 2.20). TF **2.21+** often fails to load this `.keras` graph with custom layers on Linux.
+- Custom layers (`EncoderBlock`, `DecoderBlock`) implement `build()` so nested BN/Conv weights load under **Keras 3**.
 
 ### ML model (optional)
 

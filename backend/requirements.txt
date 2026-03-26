@@ -1,5 +1,5 @@
-# Carotid segmentation (Attention U-Net inference). Model saved with Keras 3.13 — use TF that bundles compatible Keras 3.
-tensorflow>=2.16.0
+# Carotid segmentation (Attention U-Net). Pin below 2.20: TF 2.21+ often breaks loading this .keras with custom layers on Linux.
+tensorflow>=2.16.0,<2.20.0
 numpy>=1.24.0
 opencv-python-headless>=4.8.0
 

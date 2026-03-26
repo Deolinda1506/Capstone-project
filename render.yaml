@@ -15,7 +15,8 @@ services:
     # Full stack: TensorFlow + OpenCV for Attention U-Net on /scans/upload (needs ML/AttentionUNet.keras + ML/model_layers.py in repo).
     # Free tier may OOM or hit disk limits; upgrade instance if build/runtime fails.
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    # sh -c ensures PORT is expanded; exec replaces shell so signals reach uvicorn.
+    startCommand: sh -c 'exec uvicorn backend.main:app --host 0.0.0.0 --port "${PORT}"'
 
     envVars:
       # TensorFlow has no wheels for Python 3.14+ yet; Render default is 3.14.x without this.

@@ -51,9 +51,12 @@ def load_model():
         "DecoderBlock": DecoderBlock,
         "AttentionGate": AttentionGate,
     }
-    model_obj = tf.keras.models.load_model(
-        str(_MODEL_PATH), custom_objects=custom_objects, compile=False
-    )
+    # safe_mode=False: allow legacy custom-layer checkpoints with Keras 3 (Render uses TF 2.16–2.19).
+    load_kw = dict(custom_objects=custom_objects, compile=False)
+    try:
+        model_obj = tf.keras.models.load_model(str(_MODEL_PATH), safe_mode=False, **load_kw)
+    except TypeError:
+        model_obj = tf.keras.models.load_model(str(_MODEL_PATH), **load_kw)
     model = model_obj
     print(f"✅ Attention U-Net model loaded from {_MODEL_PATH}")
     return model
