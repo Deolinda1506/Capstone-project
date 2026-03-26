@@ -1,4 +1,6 @@
 """JWT token verification and get_current_user dependency."""
+from __future__ import annotations
+
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status

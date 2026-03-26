@@ -62,11 +62,14 @@ uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 - **Health:** http://localhost:8000/health  
 - **ML status:** http://localhost:8000/ml-status  
 
-**Backend unit tests (pytest):** from the repo root, with dependencies installed (`pip install -r backend/requirements.txt` or API-only plus `pytest`):
+**Backend unit tests (pytest):** from the repo root, with `pip install -r backend/requirements.txt` (includes `pytest` and `httpx` for `TestClient`):
 
 ```bash
-python3 -m pytest tests/ -v
+PYTHONPATH=. python3 -m pytest tests/ -v
 ```
+
+- **`tests/test_inference.py`** and **`tests/test_latency_unit.py`** run on **Python 3.9+**.
+- **`tests/test_api_health.py`** (imports the full FastAPI app) requires **Python 3.10+** (same family as production / Render `PYTHON_VERSION` 3.11). On 3.9 it is **skipped** automatically.
 
 **Flutter tests:** from `app/`:
 

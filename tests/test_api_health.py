@@ -1,12 +1,23 @@
 """
 API smoke tests via TestClient (runs FastAPI lifespan: DB init + optional model preload).
 
+Requires Python 3.10+ (Pydantic v2 + PEP 604 unions in backend schemas). Render uses 3.11.
+
 Skip with: pytest tests/ -m "not api"   (if you add marker)
 """
 
 from __future__ import annotations
 
+import sys
+
 import pytest
+
+if sys.version_info < (3, 10):
+    pytest.skip(
+        "test_api_health requires Python 3.10+ (run: python3.11 -m pytest tests/test_api_health.py)",
+        allow_module_level=True,
+    )
+
 from fastapi.testclient import TestClient
 
 
