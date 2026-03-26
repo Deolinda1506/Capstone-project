@@ -68,8 +68,23 @@ uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
 PYTHONPATH=. python3 -m pytest tests/ -v
 ```
 
-- **`tests/test_inference.py`** and **`tests/test_latency_unit.py`** run on **Python 3.9+**.
+- **`tests/test_inference.py`** and **`tests/test_latency_unit.py`** run on **Python 3.9+** (mocked model, no checkpoint).
+- **`tests/test_ml_model_integration.py`** (**`-m ml`**) loads **`ML/AttentionUNet.keras`** and runs TensorFlow. **Skipped** if the file is missing. Can take **tens of seconds** on CPU.
+  - Default fast run (exclude ML): `PYTHONPATH=. python3 -m pytest tests/ -m "not ml"`
+  - Full ML smoke: `PYTHONPATH=. python3 -m pytest tests/ -m ml`
 - **`tests/test_api_health.py`** (imports the full FastAPI app) requires **Python 3.10+** (same family as production / Render `PYTHON_VERSION` 3.11). On 3.9 it is **skipped** automatically.
+
+**Clinician web-dashboard (Vitest + Testing Library):** from `web-dashboard/`:
+
+```bash
+cd web-dashboard && npm ci && npm test
+```
+
+**Clinician web-dashboard E2E (Playwright, real API):** builds a preview bundle (default API base matches production when `VITE_API_URL` is unset), starts `vite preview`, and logs in with a **real** staff account. Set `E2E_IDENTIFIER` and `E2E_PASSWORD` (and optionally `E2E_API_URL` for a different backend). Do not commit credentials; use CI secrets. First run: `cd web-dashboard && npx playwright install chromium`.
+
+```bash
+cd web-dashboard && npm ci && E2E_IDENTIFIER='…' E2E_PASSWORD='…' npm run test:e2e
+```
 
 **Flutter tests:** from `app/`:
 
@@ -78,6 +93,21 @@ cd app && flutter test
 # optional integration_test (needs a device target, e.g. macOS desktop — not web):
 cd app && flutter test -d macos integration_test/smoke_test.dart
 ```
+
+**Flutter E2E (real API):** `integration_test/login_real_api_test.dart` clears local prefs/secure storage, marks onboarding complete, logs in, and asserts the role dashboard is shown. **Skipped** unless you pass staff credentials via `--dart-define` (same API as `API_BASE_URL` / default deploy). Do not commit secrets.
+
+```bash
+cd app && flutter test -d macos integration_test/login_real_api_test.dart \
+  --dart-define=E2E_IDENTIFIER='…' \
+  --dart-define=E2E_PASSWORD='…'
+# optional: --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
+```
+
+**macOS Keychain (`-34018`) / unsigned desktop builds:** the test clears prefs and best-effort clears secure storage before login. On a **sandboxed, unsigned** macOS app, `FlutterSecureStorage.deleteAll()` may hit *“A required entitlement isn’t present”*; the test ignores that error and continues. If a **saved session** is still in Keychain, you may skip the login screen and see a confusing failure—pick one of these:
+
+1. **Manual reset:** Keychain Access → search `com.carotidcheck.carotidCheck` or “CarotidCheck” → remove related items → run again with real `E2E_*` defines.
+2. **Other devices:** run the same test on **Android or iOS** (`flutter test … -d <device>`), where `deleteAll()` usually works.
+3. **Signed macOS:** in Xcode, set a **Development Team** for the Runner target, add **`keychain-access-groups`** to `macos/Runner/DebugProfile.entitlements` and `Release.entitlements` (array entry `$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)`), then rebuild—Keychain clear works without manual cleanup (**requires** proper signing, not `CODE_SIGN_IDENTITY = -`).
 
 On macOS you may see `Failed to foreground app; open returned 1` while tests still **pass**—that only means the runner could not bring the window to the front; the run itself succeeded.
 
@@ -205,6 +235,71 @@ This section maps the functional requirements (use cases) from the system design
 
 ---
 
+## Requirements traceability and validation
+
+This section supports **requirements traceability** (each FR is tied to evidence) and **user acceptance testing (UAT)** (stakeholders confirm behaviour in realistic conditions). It complements [Use Case to Implementation Mapping](#use-case-to-implementation-mapping), which describes *where* features live in code.
+
+### Requirements traceability matrix (RTM)
+
+| FR | Use case | Verification method | Evidence / artifact |
+|----|----------|---------------------|---------------------|
+| **FR1** | Register and log in | Automated E2E; API/unit where applicable | Flutter: `app/integration_test/login_real_api_test.dart` (real API). Web: `web-dashboard/e2e/login-dashboard.spec.js` (Playwright). Backend: exercise `POST /auth/login`, `POST /auth/register` via `/docs` or scripted calls. |
+| **FR2** | Create and manage patients | Manual / integration; API contract | `POST /patients`, `GET /patients` (`/docs`). Flutter: patient capture and list screens in `app/lib/screens/patient/`, `patients/`. |
+| **FR3** | Capture or upload ultrasound | Manual UAT; E2E optional | Flutter `scan_screen.dart` + `POST /scans/upload`. Confirm stored file and DB row in test environment. |
+| **FR4** | Segment artery, IMT, risk, stenosis | Automated unit & ML integration | `tests/test_inference.py`, `tests/test_latency_unit.py`; full graph: `tests/test_ml_model_integration.py` (`pytest -m ml`, requires `ML/AttentionUNet.keras`). |
+| **FR5** | Display AI segmentation overlay | Automated (pipeline); UI UAT | Upload response / `GET /scans/{id}/image` includes overlay; `ResultScreen` + web dashboard image column. |
+| **FR6** | High-risk SMS and email | Configuration + manual / sandbox | `backend/sms_alerts.py`, `email_service.py`; verify with Africa's Talking **sandbox** and test inboxes (see README SMS section). |
+| **FR7** | Clinician referrals and past results | Automated E2E; manual walkthrough | Web: Playwright login + dashboard (`web-dashboard` E2E). Flutter: hospital dashboard / analyses flows. API: `GET /scans/high-risk`, `GET /scans/with-results`. |
+| **FR8** | Store scan and result for tracking | API / DB checks | Persistence via `scans` router and models; confirm with repeated `GET` and file under `uploads/` after upload. |
+
+**Coverage gaps (honest scope):** the RTM lists the *primary* evidence for each FR; several areas still rely on manual checks, Swagger, or a single E2E path rather than exhaustive automation.
+
+| Area | Current state | Typical next step |
+|------|----------------|-------------------|
+| **Backend API** | `tests/test_api_health.py` exercises `/`, `/health`, `/latency` only—not full auth/patient/scan flows. | Add pytest cases with `TestClient`: register/login, `POST /patients`, `POST /scans/upload` (small fixture image), role-scoped list endpoints. |
+| **Inference / ML** | Strong unit coverage in `test_inference.py` / `test_latency_unit.py`; optional real checkpoint in `test_ml_model_integration.py`. | Keep `-m ml` in CI when the `.keras` file is available; optional golden-output tolerances for regression. |
+| **Flutter** | A few unit/widget tests (`test/widget_test.dart`, model tests under `test/core/`); no broad screen coverage. | More widget specs for login, scan, and result flows; keep `integration_test/login_real_api_test.dart` as API smoke. |
+| **Web dashboard** | Vitest: `LandingPage.test.jsx`; Playwright: login → dashboard when env creds are set. | Add component tests for critical tables/cards; optional second E2E for referral detail. |
+| **FR6 (SMS/email)** | Validated via sandbox config and operational checks, not a deterministic automated assertion in CI. | Documented UAT + sandbox sends; optional integration test behind env flags. |
+| **UAT** | By definition not fully automatable; scenarios in the table below are the formal acceptance layer. | Maintain a short signed checklist per release or pilot. |
+
+### User acceptance testing (UAT)
+
+**Goal:** Confirm that **real users** (or proxies such as clinical supervisors) can complete end-to-end workflows on a **staging or pilot** deployment without blocking defects.
+
+| Element | Guidance |
+|--------|----------|
+| **Roles** | **CHW:** register/login (if applicable), create patient, capture/upload scan, view result, refer if high risk. **Clinician:** login to web dashboard, open high-risk list, open analysis detail / image. **Admin** (if used): access admin views per role design. |
+| **Environment** | Same API base as pilot (e.g. Render deployment); test accounts only; SMS/email in **sandbox** where possible. |
+| **Scenario format** | For each scenario: *preconditions*, *steps*, *expected result* (map to FR ID), *pass/fail*, *date*, *tester*, *notes*. |
+| **Example scenarios (map to RTM)** | (1) CHW logs in → creates patient → uploads image → sees IMT/risk/overlay (FR1–FR5, FR8). (2) Clinician logs into dashboard → sees referral/high-risk data → opens stored scan image (FR7). (3) High-risk upload triggers notification path when configured (FR6). |
+| **Exit criteria** | Agreed set of scenarios **passed**; critical defects **fixed or waived** with documented risk; optional **sign-off** (name, role, date) on a short UAT summary or checklist. |
+
+UAT is **not** a substitute for automated regression tests: use the RTM above to keep automated checks and UAT scenarios aligned so changes do not silently break requirements.
+
+### Test metrics (targets vs achieved)
+
+Use this style of table in reports and capstone documentation: **metric**, **acceptance target**, **measured value**, **status**. Numbers below tie to the evaluation in `thesis/CAROTIDCHECK-FINAL-REPORT.md` (§5.1); refresh **Achieved** when you re-run validation or read [`GET /latency`](https://carotidcheck-api.onrender.com/latency).
+
+| Test metric | Target | Achieved | Status |
+|-------------|--------|----------|--------|
+| **Segmentation quality (Dice, Attention U-Net, Momot validation)** | ≥ 0.85 | ~0.946 ([Comparative results](#comparative-results-attention-u-net-vs-vision-transformer)) | ✓ Passed |
+| **Mean IoU (Attention U-Net, validation)** | — (reported for comparison) | ~0.949 ([same table](#comparative-results-attention-u-net-vs-vision-transformer)) | Recorded |
+| **Inference latency (end-to-end, design goal)** | &lt; 5 s per scan | Environment-dependent; CPU cloud samples may **exceed** 5 s (e.g. mean ~6.6 s for *n* = 6 in §5.1.2) | ⚠ See note |
+| **Usability (e.g. SUS or structured UAT score)** | ≥ 80% (if you adopt this threshold) | From pilot / UAT (fill in) | — |
+
+**Latency note:** The **&lt; 5 s** goal is a design target for responsive triage; free-tier / CPU-only hosting often misses it. Improve with GPU, paid tier, quantization, or warm-up—see thesis discussion.
+
+**Example (generic QA-style row set — illustrative only):** some submissions use classification-style “accuracy” and response-time rows; replace targets and achieved values with definitions that match your study (e.g. Dice as “model accuracy”, API p95 from load tests, SUS from questionnaires).
+
+| Test metric | Target | Achieved | Status |
+|-------------|--------|----------|--------|
+| Accuracy | ≥ 95% | 97% | ✓ Passed |
+| Response time | &lt; 2 seconds | 1.5 seconds | ✓ Passed |
+| Usability score | ≥ 80% | 85% | ✓ Passed |
+
+---
+
 ## Related Files
 
 | File / Folder | Purpose |
@@ -231,6 +326,20 @@ This section maps the functional requirements (use cases) from the system design
 | **Referrals** | High-risk patients → referral list, hospital map |
 | **Hospital dashboard** | High-risk referrals, analyses, quick actions |
 | **Role-based dashboards** | CHW, Clinician, Admin views |
+
+---
+
+## Comparative results: Attention U-Net vs Vision Transformer
+
+Validation-style metrics from the model comparison (training pipeline / Momot dataset; details in `ML/notebooks/Carotid_Artery_Segmentation_Models_Comparison.ipynb`). **Attention U-Net** is deployed in `backend/inference.py` because it leads on **Dice**, **Jaccard / IoU**, and **loss**.
+
+| Model | Loss | Accuracy | Dice coefficient | Jaccard index | Mean IoU |
+|-------|------|----------|------------------|---------------|----------|
+| **Attention U-Net** | 0.0409 | 0.9977 | 0.9461 | 0.9001 | 0.9489 |
+| **Vision Transformer** | 0.0937 | 0.9934 | 0.8406 | 0.7441 | 0.8687 |
+| **Absolute difference** (U-Net − ViT) | 0.0528 | 0.0043 | 0.1055 | 0.1559 | 0.0801 |
+
+*Accuracy* here is **pixel-level** classification accuracy on the segmentation task (foreground/background labels), not clinical diagnostic accuracy.
 
 ---
 

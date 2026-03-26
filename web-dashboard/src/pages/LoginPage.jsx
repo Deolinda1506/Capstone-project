@@ -42,6 +42,7 @@ export default function LoginPage() {
               placeholder={t('login.identifierPlaceholder')}
               required
               autoComplete="username"
+              data-testid="login-identifier"
             />
           </label>
           <label>
@@ -53,6 +54,7 @@ export default function LoginPage() {
               placeholder={t('login.passwordPlaceholder')}
               required
               autoComplete="current-password"
+              data-testid="login-password"
             />
           </label>
           <div className="login-forgot-wrap">
@@ -61,7 +63,12 @@ export default function LoginPage() {
             </Link>
           </div>
           {error && <div className="login-error">{error}</div>}
-          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+          <button
+            type="submit"
+            className="btn btn-primary btn-block"
+            disabled={loading}
+            data-testid="login-submit"
+          >
             {loading ? t('login.loggingIn') : t('login.submit')}
           </button>
         </form>

@@ -102,6 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         builder: (context) {
                           final l10n = context.l10n;
                           return TextFormField(
+                            key: const ValueKey('e2e-login-identifier'),
                             controller: _identifierController,
                             decoration: InputDecoration(
                               labelText: l10n.t('districtId'),
@@ -121,6 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         builder: (context) {
                           final l10n = context.l10n;
                           return TextFormField(
+                            key: const ValueKey('e2e-login-password'),
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
@@ -169,6 +171,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         builder: (context) {
                           final l10n = context.l10n;
                           return FilledButton(
+                            key: const ValueKey('e2e-login-submit'),
                             onPressed: widget.authService.isLoading ? null : _onSubmit,
                             child: widget.authService.isLoading
                                 ? const SizedBox(

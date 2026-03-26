@@ -250,8 +250,6 @@ async def lifespan(app: FastAPI):
 
             load_model()
         except Exception as e:
-            import logging
-
             logging.getLogger(__name__).warning(
                 "Could not preload ML model: %s. First scan may be slow.", e
             )

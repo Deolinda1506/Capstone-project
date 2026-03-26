@@ -200,13 +200,16 @@ class _RoleDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: authService,
-      child: switch (user.role) {
-        UserRole.chw => ChwDashboard(user: user, syncService: syncService),
-        UserRole.clinician => ClinicianDashboard(user: user, syncService: syncService),
-        UserRole.admin => AdminDashboard(user: user, syncService: syncService),
-      },
+    return KeyedSubtree(
+      key: const ValueKey('e2e-post-login-home'),
+      child: ChangeNotifierProvider.value(
+        value: authService,
+        child: switch (user.role) {
+          UserRole.chw => ChwDashboard(user: user, syncService: syncService),
+          UserRole.clinician => ClinicianDashboard(user: user, syncService: syncService),
+          UserRole.admin => AdminDashboard(user: user, syncService: syncService),
+        },
+      ),
     );
   }
 }

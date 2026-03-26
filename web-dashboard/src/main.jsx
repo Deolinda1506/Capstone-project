@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { ROUTER_FUTURE } from './routerFutureFlags'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -11,7 +12,7 @@ import './App.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={ROUTER_FUTURE}>
       <LocaleProvider>
         <ThemeProvider>
           <AuthProvider>

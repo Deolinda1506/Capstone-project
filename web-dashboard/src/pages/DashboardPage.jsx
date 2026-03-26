@@ -136,13 +136,13 @@ export default function DashboardPage() {
 
   if (loading)
     return (
-      <div className="dashboard">
+      <div className="dashboard" data-testid="dashboard-root">
         <div className="dashboard-loading">{t('dashboard.loading')}</div>
       </div>
     )
 
   return (
-    <div className="dashboard">
+    <div className="dashboard" data-testid="dashboard-root">
       <h1 className="dashboard-title">{t('dashboard.title')}</h1>
 
       <div className="dashboard-charts">
