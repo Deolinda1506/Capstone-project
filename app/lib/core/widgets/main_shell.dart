@@ -17,7 +17,14 @@ class MainShell extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => navigationShell.goBranch(index),
+        onDestinationSelected: (index) {
+          // Branch 0 nests routes under `/` (analyses, patients, etc.). Tapping Home
+          // while already on branch 0 is a no-op unless we reset to the branch root.
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == 0,
+          );
+        },
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),

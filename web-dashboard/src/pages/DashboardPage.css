@@ -12,6 +12,25 @@
   margin: 0 0 1.5rem;
 }
 
+.dashboard-banner {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.dashboard-banner-error {
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #dc2626) 35%, transparent);
+}
+
+.dashboard-banner-hint {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
 .dashboard-charts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

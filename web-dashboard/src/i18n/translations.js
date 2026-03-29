@@ -137,6 +137,10 @@ export const STRINGS = {
     'dashboard.analysesHint':
       'Every scan with AI results for patients you can access. Open a row for the full image and details.',
     'dashboard.analysesEmpty': 'No analyses yet',
+    'dashboard.listsLoadError':
+      'Could not load analyses or referrals. Try signing in again, or confirm the dashboard uses the same API URL as the mobile app (VITE_API_URL).',
+    'dashboard.analysesMismatchHint':
+      'Inference activity appears on this server (latency), but no analyses are listed for your account. Use the same login as on the mobile app, or a clinician account to see all patients. Confirm the dashboard API URL matches the app.',
     'dashboard.colPreview': 'Image',
     'dashboard.colPatient': 'Patient',
     'dashboard.colPatientId': 'Patient ID',
@@ -349,6 +353,10 @@ export const STRINGS = {
     'dashboard.analysesHint':
       'Chaque scan avec résultats IA pour les patients accessibles. Ouvrez une ligne pour l’image et le détail.',
     'dashboard.analysesEmpty': 'Aucune analyse pour le moment',
+    'dashboard.listsLoadError':
+      'Impossible de charger les analyses ou les orientations. Reconnectez-vous ou vérifiez que le tableau utilise la même API que l’application mobile (VITE_API_URL).',
+    'dashboard.analysesMismatchHint':
+      'L’activité d’inférence apparaît sur ce serveur (latence), mais aucune analyse n’est listée pour votre compte. Utilisez le même identifiant que sur l’application mobile, ou un compte clinicien pour voir tous les patients. Vérifiez l’URL de l’API.',
     'dashboard.colPreview': 'Image',
     'dashboard.colPatient': 'Patient',
     'dashboard.colPatientId': 'ID patient',
@@ -559,6 +567,10 @@ export const STRINGS = {
     'dashboard.analysesHint':
       'Scan zose zifite ibisubizo bya AI ku barwayi ubasha kubona. Fungura umurongo kugirango ubone ifoto n’ibisobanuro.',
     'dashboard.analysesEmpty': 'Nta gusuzuma ubu',
+    'dashboard.listsLoadError':
+      'Ntibyashobotse gukurura ibisuzumwa cyangwa abanditswe. Ongera winjire, cyangwa reba ko urubuga rugenzana API imwe n’iyi ya telefoni (VITE_API_URL).',
+    'dashboard.analysesMismatchHint':
+      'Hari ibikorwa by’inference kuri uyu seriveri (ubukererwe), ariko nta bisuzuma biboneka ku konti yawe. Koresha konti imwe na ya telefoni, cyangwa konti y’umukoresha ubuvuzi kugirango ubone abarwayi bose. Emeza ko URL ya API ihuye.',
     'dashboard.colPreview': 'Ifoto',
     'dashboard.colPatient': 'Umurwayi',
     'dashboard.colPatientId': 'Indangamuntu',

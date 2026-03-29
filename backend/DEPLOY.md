@@ -70,9 +70,7 @@ Set these on your host or platform:
 
 - **SECRET_KEY** — required in prod. Generate: `openssl rand -hex 32`
 - **DATABASE_URL** — use PostgreSQL in prod, e.g. `postgresql://user:pass@host:5432/carotidcheck`
-- Optional: **SMTP_HOST**, **SMTP_PORT**, **SMTP_USER**, **SMTP_PASSWORD**, **EMAIL_FROM** (for welcome/referral emails)
-- Optional: **AFRICAS_TALKING_USERNAME**, **AFRICAS_TALKING_API_KEY**, **AFRICAS_TALKING_CLINICIAN_PHONES** (for SMS alerts when high-risk and CHW ID delivery)
-  - **Sandbox (free):** Use `AFRICAS_TALKING_USERNAME=sandbox` and your sandbox API key from [Africa's Talking](https://account.africastalking.com/). Messages are simulated and not delivered to real phones. Copy `.env.example` to `.env` and fill in the sandbox values.
+- Optional: **SMTP_HOST**, **SMTP_PORT**, **SMTP_USER**, **SMTP_PASSWORD**, **EMAIL_FROM** (for welcome/referral/high-risk emails). SMS is not used in this deployment.
 - Optional: **APPROVAL_CODES** — district approval codes to restrict registration (format: `0102:gasabo2024,0101:nyarugenge2024`). Only CHWs with the correct code from their supervisor can register for that district.
 
 ## 2. ML model

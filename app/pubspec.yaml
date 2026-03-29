@@ -58,9 +58,6 @@ dependencies:
   connectivity_plus: ^6.0.5
   path_provider: ^2.1.4
 
-  # Africa's Talking SMS
-  # (using http for direct API calls)
-
   # Maps - OpenStreetMap (no API key required)
   flutter_map: ^8.2.2
   latlong2: ^0.9.1

@@ -90,7 +90,7 @@ class AuthService extends ChangeNotifier {
   }
 
   /// Register and return assigned CHW ID (e.g. 0102-001) or null on failure.
-  /// Optional phone: sends ID via SMS and prevents duplicate accounts.
+  /// Optional phone: duplicate check; CHW ID is sent by email when email is provided.
   /// Optional email: sends ID via email.
   Future<String?> registerWithId(
     String password,

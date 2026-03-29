@@ -41,8 +41,15 @@ export async function getScanResult(scanId) {
   return apiRequest(`/scans/${scanId}/result`)
 }
 
+/** Public endpoint — no JWT so latency still loads if list calls fail (e.g. expired session). */
 export async function getLatencyStats() {
-  return apiRequest('/latency')
+  const url = `${API_BASE}/latency`
+  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(formatDetail(err.detail) || `Request failed: ${res.status}`)
+  }
+  return res.json()
 }
 
 export async function fetchScanImageBlob(scanId) {

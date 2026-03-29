@@ -62,38 +62,66 @@ export default function DashboardPage() {
   const [reviewTab, setReviewTab] = useState(
     /** @type {'all' | 'pending' | 'reviewed'} */ ('all'),
   )
+  const [listError, setListError] = useState(/** @type {string | null} */ (null))
 
   const fetchDashboard = useCallback(
     async ({ showLoading = true } = {}) => {
       if (showLoading) setLoading(true)
       const nameFilter = searchQuery.trim()
+      setListError(null)
       try {
-        const [hr, scans, lat] = await Promise.all([
+        const [hrSettled, scansSettled, latSettled] = await Promise.allSettled([
           getHighRisk(100, nameFilter, reviewTab),
           getScansWithResults(200, nameFilter),
           getLatencyStats(),
         ])
-        setHighRisk(hr)
-        setAllScans(scans)
-        setLatency(
-          lat && typeof lat === 'object'
-            ? {
-                count: Number(lat.count || 0),
-                mean_sec: typeof lat.mean_sec === 'number' ? lat.mean_sec : null,
-                min_sec: typeof lat.min_sec === 'number' ? lat.min_sec : null,
-                max_sec: typeof lat.max_sec === 'number' ? lat.max_sec : null,
-              }
-            : { count: 0, mean_sec: null, min_sec: null, max_sec: null },
-        )
-      } catch {
-        setHighRisk([])
-        setAllScans([])
-        setLatency({ count: 0, mean_sec: null, min_sec: null, max_sec: null })
+
+        if (hrSettled.status === 'fulfilled') {
+          const v = hrSettled.value
+          setHighRisk(Array.isArray(v) ? v : [])
+        } else {
+          setHighRisk([])
+        }
+
+        if (scansSettled.status === 'fulfilled') {
+          const v = scansSettled.value
+          setAllScans(Array.isArray(v) ? v : [])
+        } else {
+          setAllScans([])
+        }
+
+        if (latSettled.status === 'fulfilled') {
+          const lat = latSettled.value
+          setLatency(
+            lat && typeof lat === 'object'
+              ? {
+                  count: Number(lat.count || 0),
+                  mean_sec: typeof lat.mean_sec === 'number' ? lat.mean_sec : null,
+                  min_sec: typeof lat.min_sec === 'number' ? lat.min_sec : null,
+                  max_sec: typeof lat.max_sec === 'number' ? lat.max_sec : null,
+                }
+              : { count: 0, mean_sec: null, min_sec: null, max_sec: null },
+          )
+        } else {
+          setLatency({ count: 0, mean_sec: null, min_sec: null, max_sec: null })
+        }
+
+        const listFailures = [hrSettled, scansSettled].filter((s) => s.status === 'rejected')
+        if (listFailures.length) {
+          const r = listFailures[0].reason
+          setListError(
+            r instanceof Error
+              ? r.message
+              : typeof r === 'string'
+                ? r
+                : t('dashboard.listsLoadError'),
+          )
+        }
       } finally {
         if (showLoading) setLoading(false)
       }
     },
-    [searchQuery, reviewTab],
+    [searchQuery, reviewTab, t],
   )
 
   useEffect(() => {
@@ -194,9 +222,23 @@ export default function DashboardPage() {
       </div>
     )
 
+  const showAnalysesMismatchHint =
+    !listError &&
+    latency.count > 0 &&
+    allScans.length === 0 &&
+    !searchQuery.trim()
+
   return (
     <div className="dashboard" data-testid="dashboard-root">
       <h1 className="dashboard-title">{t('dashboard.title')}</h1>
+      {listError && (
+        <div className="dashboard-banner dashboard-banner-error" role="alert">
+          {listError}
+        </div>
+      )}
+      {showAnalysesMismatchHint && (
+        <div className="dashboard-banner dashboard-banner-hint">{t('dashboard.analysesMismatchHint')}</div>
+      )}
 
       <div className="dashboard-charts">
         <div className="chart-card">

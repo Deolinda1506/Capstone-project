@@ -1,0 +1,80 @@
+flowchart TB
+  subgraph clients["1. Clients"]
+    direction LR
+    DC[Desktop browser]
+    MB[Mobile Flutter / Web]
+    TB[Tablet]
+  end
+
+  subgraph fe["2. Frontend"]
+    subgraph fe_pub["Public and auth"]
+      LP[Landing / Onboarding]
+      AUTH[Auth UI login register reset]
+    end
+    subgraph fe_chw["CHW mobile Flutter"]
+      PC[Patient capture and consent]
+      SU[Screening scan upload]
+      RS[Result overlay and risk]
+      RH[Referral and hospital map]
+    end
+    subgraph fe_web["Clinician web React"]
+      OV[Overview dashboard charts]
+      AL[Analyses and referral tables]
+      TM[Team and settings]
+      INAPP[In-app alerts bell badge banner]
+    end
+    subgraph fe_adm["Admin"]
+      AC[Accounts and org roster]
+    end
+  end
+
+  subgraph gw["3. API gateway single FastAPI process"]
+    JWT[JWT Bearer validation]
+    COR[CORS protection]
+    API[FastAPI REST routers HTTPS JSON]
+  end
+
+  subgraph be["4. Backend logical services one deployable"]
+    S1[Auth service sessions]
+    S2[Patients service]
+    S3[Scans upload inference store]
+    S4[Referrals high-risk review]
+    S5[Admin team invite]
+    S6[Email SMTP queue]
+    S7[Health latency ML status]
+  end
+
+  subgraph dai["5. Data and AI"]
+    FS[File storage scan images PNG]
+    DB[(SQL database Postgres or SQLite)]
+    subgraph mlblk["AI pipeline"]
+      UNET[Attention U-Net segmentation]
+      IMT[IMT mm risk stenosis optional]
+    end
+  end
+
+  subgraph dep["6. Deployment and notification channels"]
+    GH[GitHub repository]
+    CI[CI CD tests build]
+    RD[Render web API and static site]
+    CH1[In-app channel UI polls API]
+    CH2[SMTP email channel]
+  end
+
+  clients -->|HTTPS JSON| fe
+  fe -->|HTTPS JSON| gw
+  INAPP -->|poll JSON| API
+  gw --> be
+  S1 --> DB
+  S2 --> DB
+  S3 --> FS
+  S3 --> DB
+  S3 --> UNET
+  UNET --> IMT
+  IMT --> DB
+  S4 --> DB
+  S5 --> DB
+  S6 --> CH2
+  CH1 -.->|same API| INAPP
+  GH --> CI --> RD --> API
+  S7 --> API

@@ -75,7 +75,7 @@ Ultimately, this software directly addresses the catastrophic 72-hour delay in s
 | Cloud Hosting (FastAPI) | Hosting the backend and deployed segmentation model (TensorFlow/Keras, ViT vs. Attention U-Net pipeline) using the Render Free Tier with an optimized "Lite" stack where applicable. | $0 (Free Tier) |
 | Mobile App Backend | Development and deployment of the FastAPI interface to manage mobile requests. | $0 (Open Source) |
 | Cloud Database | Managed database service (e.g., Supabase or Firebase) for real-time patient data synchronization. | $0 (Free Tier) |
-| SMS/Notification Gateway | Integration of Africa's Talking API for automated emergency alerts to clinicians in Kigali. | $25 |
+| Email notifications (SMTP) | Referral and account emails via configured SMTP (e.g. Gmail); no third-party SMS gateway in scope. | $0 |
 | UI/UX Design Tool | Professional mobile interface prototyping and wireframing using Figma. | $0 (Free Tier) |
 | Logistics & Field Testing | Transport, mobile data bundles (MTN/Airtel), translation services, and participant stipends in Kimironko and Bumbogo. | $135 |
 | Miscellaneous | Contingency fund for unexpected technical requirements, hardware maintenance, or API overages. | $90 |

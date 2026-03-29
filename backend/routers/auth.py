@@ -26,7 +26,6 @@ from backend.schemas.user import (
 )
 from backend.jwt_utils import create_access_token
 from backend import email_service
-from backend import sms_alerts
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -155,14 +154,13 @@ def register(
     phone = _normalize_phone(body.phone) if body.phone else None
     email_for_send = (body.email or "").strip() if body.email and "@" in (body.email or "") else None
 
-    # Duplicate check: if phone provided and already registered, send ID and reject
+    # Duplicate check: if phone provided and already registered, reject
     if phone:
         existing = db.query(User).filter(User.phone == phone, User.is_deleted == False).first()
         if existing and existing.staff_id:
-            sms_alerts.send_chw_id_sms(phone, existing.staff_id)
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"You already have an account. Your ID is {existing.staff_id}. We've sent it to your phone.",
+                detail=f"You already have an account. Your ID is {existing.staff_id}. Use it to log in.",
             )
 
     count = db.query(User).filter(User.facility == district).count()
@@ -183,9 +181,7 @@ def register(
     db.commit()
     db.refresh(user)
 
-    # Send ID via SMS and/or email
-    if phone:
-        sms_alerts.send_chw_id_sms(phone, assigned_id)
+    # Send ID via email when provided
     if email_for_send:
         email_service.send_chw_id_email(email_for_send, assigned_id)
 

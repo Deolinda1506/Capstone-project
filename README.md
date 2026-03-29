@@ -150,19 +150,10 @@ npm run dev
 
 Open http://localhost:5173. Login with Staff ID (e.g. `0102-001`) and password. Set `VITE_API_URL` in `.env` if the API is not at `http://localhost:8000`.
 
-### Optional: SMS alerts (sandbox, free)
+### Notifications
 
-To test high-risk SMS alerts and CHW ID delivery:
-
-1. Register at [Africa's Talking](https://account.africastalking.com/auth/register)
-2. Go to **Sandbox** → **Settings** → **API Key** → Generate
-3. Copy `.env.example` to `.env` and set:
-   ```
-   AFRICAS_TALKING_USERNAME=sandbox
-   AFRICAS_TALKING_API_KEY=your_sandbox_api_key
-   AFRICAS_TALKING_CLINICIAN_PHONES=+250791948534
-   ```
-4. Restart the backend. Messages are simulated (not delivered to real phones).
+- **In-app (web dashboard):** Pending high-risk referrals surface in the header (**bell**, **badge**, optional **banner**) by polling the API (`PendingReferralsContext`). Optional **browser** notifications if enabled in Settings.
+- **Email (SMTP):** Referral and CHW ID messages when `SMTP_*` is configured. See `backend/.env.example` and `backend/email_service.py`.
 
 ---
 
@@ -192,6 +183,8 @@ CarotidCheck app/
 ├── uploads/                # Stored scan images (overlay) for clinician review
 └── README.md
 ```
+
+**Layered architecture (clients → API → data & AI → deployment):** see [docs/system-architecture.md](docs/system-architecture.md).
 
 ---
 
@@ -229,7 +222,7 @@ This section maps the functional requirements (use cases) from the system design
 | **Capture or upload carotid ultrasound** | FR3 | `POST /scans/upload` (multipart: `patient_id`, `file`). Flutter: `scan_screen.dart` → `image_picker` (camera/gallery) → `ApiClient.uploadScan()`. Image stored in `uploads/` for clinician review. |
 | **Segment artery walls and return IMT, risk, stenosis** | FR4 | `backend/inference.py` → `predict_imt()`: pad → resize 256×256 → Attention U-Net → mask → IMT (mm). Risk: Low &lt;0.9 mm, Moderate 0.9–1.2 mm, High &gt;1.2 mm. NASCET stenosis in `inference.py`. |
 | **Display AI segmentation overlay** | FR5 | `ScanUploadResponse.segmentation_overlay_base64` returned from `/scans/upload`; `ResultScreen` displays `Image.memory(base64Decode(...))`. Stored overlay: `GET /scans/{id}/image` for clinician dashboard. |
-| **High-risk SMS and email** | FR6 | `backend/sms_alerts.py`, `email_service.py`; triggered in `scans.py` when `pred["is_high_risk"]`. Africa's Talking sandbox; clinician phones from `AFRICAS_TALKING_CLINICIAN_PHONES`. |
+| **High-risk visibility + alerts** | FR6 | **In-app:** web dashboard polls `GET /scans/high-risk` → bell, badge, banner (`web-dashboard/src/context/PendingReferralsContext.jsx`). **Email:** `backend/email_service.py` when `pred["is_high_risk"]` and SMTP configured. SMS not used. |
 | **Clinician view high-risk referrals and past scan results** | FR7 | `GET /scans/high-risk` → `hospital_dashboard_screen.dart`; `GET /scans/with-results` → `analyses_screen.dart`. `GET /scans/{id}/image` fetches stored overlay for result view. `ReferralCard` → `ResultScreen` with image. |
 | **Store scan and result for longitudinal tracking** | FR8 | `Scan` and `Result` models in `backend/models/`; `scans.py` stores scan + result in DB. Image stored in `uploads/{scan_id}.png`. `image_path` in DB; `has_image` in list responses. |
 
@@ -248,7 +241,7 @@ This section supports **requirements traceability** (each FR is tied to evidence
 | **FR3** | Capture or upload ultrasound | Manual UAT; E2E optional | Flutter `scan_screen.dart` + `POST /scans/upload`. Confirm stored file and DB row in test environment. |
 | **FR4** | Segment artery, IMT, risk, stenosis | Automated unit & ML integration | `tests/test_inference.py`, `tests/test_latency_unit.py`; full graph: `tests/test_ml_model_integration.py` (`pytest -m ml`, requires `ML/AttentionUNet.keras`). |
 | **FR5** | Display AI segmentation overlay | Automated (pipeline); UI UAT | Upload response / `GET /scans/{id}/image` includes overlay; `ResultScreen` + web dashboard image column. |
-| **FR6** | High-risk SMS and email | Configuration + manual / sandbox | `backend/sms_alerts.py`, `email_service.py`; verify with Africa's Talking **sandbox** and test inboxes (see README SMS section). |
+| **FR6** | High-risk in-app + optional email | Manual / UAT | Web: bell, badge, poll (`PendingReferralsContext`). Email: SMTP when configured (see `.env.example`). |
 | **FR7** | Clinician referrals and past results | Automated E2E; manual walkthrough | Web: Playwright login + dashboard (`web-dashboard` E2E). Flutter: hospital dashboard / analyses flows. API: `GET /scans/high-risk`, `GET /scans/with-results`. |
 | **FR8** | Store scan and result for tracking | API / DB checks | Persistence via `scans` router and models; confirm with repeated `GET` and file under `uploads/` after upload. |
 
@@ -260,7 +253,7 @@ This section supports **requirements traceability** (each FR is tied to evidence
 | **Inference / ML** | Strong unit coverage in `test_inference.py` / `test_latency_unit.py`; optional real checkpoint in `test_ml_model_integration.py`. | Keep `-m ml` in CI when the `.keras` file is available; optional golden-output tolerances for regression. |
 | **Flutter** | A few unit/widget tests (`test/widget_test.dart`, model tests under `test/core/`); no broad screen coverage. | More widget specs for login, scan, and result flows; keep `integration_test/login_real_api_test.dart` as API smoke. |
 | **Web dashboard** | Vitest: `LandingPage.test.jsx`; Playwright: login → dashboard when env creds are set. | Add component tests for critical tables/cards; optional second E2E for referral detail. |
-| **FR6 (SMS/email)** | Validated via sandbox config and operational checks, not a deterministic automated assertion in CI. | Documented UAT + sandbox sends; optional integration test behind env flags. |
+| **FR6 (in-app + email)** | In-app list/badge verified in UI; email validated via SMTP when enabled. | UAT walkthrough; optional integration test behind env flags. |
 | **UAT** | By definition not fully automatable; scenarios in the table below are the formal acceptance layer. | Maintain a short signed checklist per release or pilot. |
 
 ### User acceptance testing (UAT)
@@ -270,9 +263,9 @@ This section supports **requirements traceability** (each FR is tied to evidence
 | Element | Guidance |
 |--------|----------|
 | **Roles** | **CHW:** register/login (if applicable), create patient, capture/upload scan, view result, refer if high risk. **Clinician:** login to web dashboard, open high-risk list, open analysis detail / image. **Admin** (if used): access admin views per role design. |
-| **Environment** | Same API base as pilot (e.g. Render deployment); test accounts only; SMS/email in **sandbox** where possible. |
+| **Environment** | Same API base as pilot (e.g. Render deployment); test accounts only; SMTP/email test inboxes where possible. |
 | **Scenario format** | For each scenario: *preconditions*, *steps*, *expected result* (map to FR ID), *pass/fail*, *date*, *tester*, *notes*. |
-| **Example scenarios (map to RTM)** | (1) CHW logs in → creates patient → uploads image → sees IMT/risk/overlay (FR1–FR5, FR8). (2) Clinician logs into dashboard → sees referral/high-risk data → opens stored scan image (FR7). (3) High-risk upload triggers notification path when configured (FR6). |
+| **Example scenarios (map to RTM)** | (1) CHW logs in → creates patient → uploads image → sees IMT/risk/overlay (FR1–FR5, FR8). (2) Clinician logs into dashboard → sees referral/high-risk data → opens stored scan image (FR7). (3) New high-risk case appears in **in-app** notifications (bell/badge); referral email only if SMTP is on (FR6). |
 | **Exit criteria** | Agreed set of scenarios **passed**; critical defects **fixed or waived** with documented risk; optional **sign-off** (name, role, date) on a short UAT summary or checklist. |
 
 UAT is **not** a substitute for automated regression tests: use the RTM above to keep automated checks and UAT scenarios aligned so changes do not silently break requirements.
@@ -368,7 +361,7 @@ Validation-style metrics from the model comparison (training pipeline / Momot da
 
 ### Objectives partially met
 - **Real-time AI overlay:** Depends on ML model availability; demo mode provides stub results when model is not loaded. *Why partial:* Model size (~2–3 GB) limits deployment on free-tier hosting; overlay works when model is present.
-- **SMS/Africa's Talking alerts:** Use sandbox (free) for testing: set `AFRICAS_TALKING_USERNAME=sandbox` and your sandbox API key in `.env`. See `.env.example`.
+- **Notifications:** Clinicians get **in-app** referral alerts on the web dashboard (API polling); configure SMTP in `.env` (see `backend/.env.example`) for **email** as well. SMS is not used.
 
 ### Objectives not met / deferred
 - **Field pilot (30–50 participants, Kimironko/Bumbogo):** Scheduled for Jan–Mar 2026. *Why deferred:* Deployment and field testing required more time than the sprint allowed; the system is now ready for pilot.

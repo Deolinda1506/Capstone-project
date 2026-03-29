@@ -28,7 +28,7 @@ class RegisterRequest(BaseModel):
     facility: str | None = None  # Hospital or health facility (legacy)
     district_id: str | None = None  # Rwanda district ID code (e.g. 0101, 0102)
     approval_code: str | None = None  # District approval code from supervisor (required when APPROVAL_CODES set)
-    phone: str | None = None  # E.164 or local format; for SMS ID delivery + duplicate check
+    phone: str | None = None  # E.164 or local format; duplicate check (optional)
     email: str | None = None  # Optional; for email ID delivery (if different from placeholder)
 
 

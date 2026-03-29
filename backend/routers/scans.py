@@ -20,7 +20,6 @@ from backend.database import get_db
 from backend.models import User, Patient, Scan, Result
 from backend.schemas.scan import ClinicianReviewUpdate, ScanUploadResponse
 from backend.auth import get_current_user_or_dev
-from backend import sms_alerts
 from backend import email_service
 from backend import latency as latency_tracker
 
@@ -173,9 +172,6 @@ async def upload_scan_image(
         image_path=image_path,
         clinician_review_status="pending" if pred["is_high_risk"] else "not_applicable",
     )
-    db.add(scan)
-    db.commit()
-    db.refresh(scan)
     result = Result(
         id=str(uuid4()),
         scan_id=scan.id,
@@ -186,16 +182,12 @@ async def upload_scan_image(
         stenosis_source=pred.get("stenosis_source"),
         model_version=pred.get("model_version") or "attention_unet",
     )
+    db.add(scan)
     db.add(result)
     db.commit()
+    db.refresh(scan)
     db.refresh(result)
     if pred["is_high_risk"]:
-        sms_alerts.notify_high_risk(
-            scan_id=scan.id,
-            patient_id=patient.id,
-            imt_mm=pred["imt_mm"],
-            risk_level=pred["risk_level"],
-        )
         email_service.send_referral_email(
             patient,
             imt_mm=pred["imt_mm"],

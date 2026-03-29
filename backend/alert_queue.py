@@ -1,7 +1,7 @@
 """DB-backed alert queue with a simple in-process worker.
 
 Purpose: avoid blocking critical user flows (registration/password reset/scan)
-on potentially flaky delivery (SMTP/SMS gateways). Alerts are enqueued and
+on potentially flaky delivery (SMTP). Alerts are enqueued and
 retried until they either succeed or hit max attempts.
 """
 

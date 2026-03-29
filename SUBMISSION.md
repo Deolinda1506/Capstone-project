@@ -56,7 +56,7 @@ Use this template for your report (Testing Results, Analysis, Discussion, Recomm
 
 ### Objectives partially met
 - **Real-time AI overlay:** Depends on ML model availability; demo mode provides stub results when model is not loaded.
-- **SMS/Africa's Talking alerts:** Integrated but requires API configuration for production.
+- **In-app notifications (web dashboard):** Bell, badge, and banner via API polling (`PendingReferralsContext`). **Email (SMTP):** optional referral/account mail when configured. SMS is not used.
 
 ### Objectives not met / deferred
 - **Field pilot (30–50 participants, Kimironko/Bumbogo):** Scheduled for Jan–Mar 2026; deployment and field testing pending.
@@ -81,7 +81,7 @@ Use this template for your report (Testing Results, Analysis, Discussion, Recomm
 ### For the community
 
 - Deploy StrokeLink/CarotidCheck in Gasabo District pilot (Kimironko, Bumbogo) with 5 CHWs and 2–3 clinicians.
-- Configure Africa's Talking SMS for high-risk alerts to clinicians in Kigali.
+- Configure SMTP for high-risk referral emails to clinicians when needed.
 - Provide mobile data bundles (MTN/Airtel) for CHWs during field testing.
 
 ### Future work
