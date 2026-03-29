@@ -129,6 +129,10 @@ export const STRINGS = {
     'dashboard.id': 'ID:',
     'dashboard.age': 'Age:',
     'dashboard.plaque': 'Plaque detected',
+    'dashboard.todayTitle': "Today's analyses",
+    'dashboard.todayEmpty': 'No analyses completed today yet.',
+    'dashboard.todaySeeAll': 'See all analyses below',
+    'dashboard.todayMore': '+{count} more',
     'dashboard.analysesTitle': 'All analyses',
     'dashboard.analysesHint':
       'Every scan with AI results for patients you can access. Open a row for the full image and details.',
@@ -337,6 +341,10 @@ export const STRINGS = {
     'dashboard.id': 'ID :',
     'dashboard.age': 'Âge :',
     'dashboard.plaque': 'Plaque détectée',
+    'dashboard.todayTitle': 'Analyses du jour',
+    'dashboard.todayEmpty': 'Aucune analyse terminée aujourd’hui.',
+    'dashboard.todaySeeAll': 'Voir toutes les analyses ci-dessous',
+    'dashboard.todayMore': '+{count} de plus',
     'dashboard.analysesTitle': 'Toutes les analyses',
     'dashboard.analysesHint':
       'Chaque scan avec résultats IA pour les patients accessibles. Ouvrez une ligne pour l’image et le détail.',
@@ -543,6 +551,10 @@ export const STRINGS = {
     'dashboard.id': 'ID:',
     'dashboard.age': 'Imyaka:',
     'dashboard.plaque': 'Plaque yabonetse',
+    'dashboard.todayTitle': 'Ibisubizo by’uyu munsi',
+    'dashboard.todayEmpty': 'Nta bisubizo byarangiye uyumunsi.',
+    'dashboard.todaySeeAll': 'Reba byose hepfo',
+    'dashboard.todayMore': '+{count} bindi',
     'dashboard.analysesTitle': 'Gusuzuma byose',
     'dashboard.analysesHint':
       'Scan zose zifite ibisubizo bya AI ku barwayi ubasha kubona. Fungura umurongo kugirango ubone ifoto n’ibisobanuro.',

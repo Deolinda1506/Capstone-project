@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useSearch } from '../context/SearchContext'
 import { useLocale } from '../context/LocaleContext'
@@ -24,6 +24,19 @@ const RISK_COLORS = {
   Unknown: '#94a3b8',
 }
 
+/** Local calendar day, aligned with Flutter TodayAnalysesSection. */
+function isCreatedAtToday(iso) {
+  if (!iso) return false
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return false
+  const now = new Date()
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  )
+}
+
 export default function DashboardPage() {
   const { searchQuery } = useSearch()
   const { t, dateLocaleTag } = useLocale()
@@ -41,15 +54,16 @@ export default function DashboardPage() {
     /** @type {'all' | 'pending' | 'reviewed'} */ ('pending'),
   )
 
-  useEffect(() => {
-    const nameFilter = searchQuery.trim()
-    setLoading(true)
-    Promise.all([
-      getHighRisk(100, nameFilter, reviewTab),
-      getScansWithResults(200, nameFilter),
-      getLatencyStats(),
-    ])
-      .then(([hr, scans, lat]) => {
+  const fetchDashboard = useCallback(
+    async ({ showLoading = true } = {}) => {
+      if (showLoading) setLoading(true)
+      const nameFilter = searchQuery.trim()
+      try {
+        const [hr, scans, lat] = await Promise.all([
+          getHighRisk(100, nameFilter, reviewTab),
+          getScansWithResults(200, nameFilter),
+          getLatencyStats(),
+        ])
         setHighRisk(hr)
         setAllScans(scans)
         setLatency(
@@ -62,14 +76,28 @@ export default function DashboardPage() {
               }
             : { count: 0, mean_sec: null, min_sec: null, max_sec: null },
         )
-      })
-      .catch(() => {
+      } catch {
         setHighRisk([])
         setAllScans([])
         setLatency({ count: 0, mean_sec: null, min_sec: null, max_sec: null })
-      })
-      .finally(() => setLoading(false))
-  }, [searchQuery, reviewTab])
+      } finally {
+        if (showLoading) setLoading(false)
+      }
+    },
+    [searchQuery, reviewTab],
+  )
+
+  useEffect(() => {
+    fetchDashboard({ showLoading: true })
+  }, [fetchDashboard])
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') fetchDashboard({ showLoading: false })
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [fetchDashboard])
 
   const filteredHighRisk = useMemo(() => {
     if (!searchQuery.trim()) return highRisk
@@ -94,6 +122,13 @@ export default function DashboardPage() {
         s.patient_id?.toLowerCase().includes(q),
     )
   }, [allScans, searchQuery])
+
+  const todayScans = useMemo(
+    () => filteredAllScans.filter((s) => isCreatedAtToday(s.created_at)),
+    [filteredAllScans],
+  )
+  const todayPreview = useMemo(() => todayScans.slice(0, 5), [todayScans])
+  const todayMoreCount = Math.max(0, todayScans.length - todayPreview.length)
 
   const riskDistribution = useMemo(() => {
     const counts = { Low: 0, Moderate: 0, High: 0, Unknown: 0 }
@@ -210,7 +245,49 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <section className="analyses-section">
+      <section className="today-section" aria-labelledby="today-heading">
+        <div className="today-header">
+          <h2 id="today-heading">{t('dashboard.todayTitle')}</h2>
+          <a className="today-see-all" href="#all-analyses">
+            {t('dashboard.todaySeeAll')}
+          </a>
+        </div>
+        {todayPreview.length === 0 ? (
+          <p className="today-empty">{t('dashboard.todayEmpty')}</p>
+        ) : (
+          <ul className="today-list">
+            {todayPreview.map((s) => (
+              <li key={s.scan_id}>
+                <Link to={`/referral/${encodeURIComponent(s.scan_id)}`} className="today-row">
+                  <span className="today-name">{s.patient_name || '—'}</span>
+                  <span className="today-meta">
+                    {s.created_at
+                      ? new Date(s.created_at).toLocaleString(dateLocaleTag)
+                      : '—'}
+                    {s.risk_level ? (
+                      <span className="today-risk">
+                        {' '}
+                        · {s.risk_level}
+                      </span>
+                    ) : null}
+                    {s.stenosis_pct != null ? (
+                      <span className="today-stenosis">
+                        {' '}
+                        · {s.stenosis_pct}%
+                      </span>
+                    ) : null}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {todayMoreCount > 0 && (
+          <p className="today-more">{t('dashboard.todayMore', { count: todayMoreCount })}</p>
+        )}
+      </section>
+
+      <section className="analyses-section" id="all-analyses">
         <h2>{t('dashboard.analysesTitle')}</h2>
         <p className="analyses-section-hint">{t('dashboard.analysesHint')}</p>
         {filteredAllScans.length === 0 ? (

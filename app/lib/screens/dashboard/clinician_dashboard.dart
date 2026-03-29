@@ -8,6 +8,7 @@ import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/quick_action_card.dart';
 import '../../core/widgets/responsive_layout.dart';
+import '../../core/widgets/today_analyses_section.dart';
 
 class ClinicianDashboard extends StatelessWidget {
   final UserModel user;
@@ -66,6 +67,8 @@ class ClinicianDashboard extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 28),
+              const TodayAnalysesSection(),
+              const SizedBox(height: 20),
               _SectionTitle(title: context.l10n.t('reviewValidation')),
               const SizedBox(height: 14),
               QuickActionCard(

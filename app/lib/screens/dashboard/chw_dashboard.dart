@@ -8,6 +8,7 @@ import '../../core/widgets/app_logo.dart';
 import '../../core/widgets/nav_buttons.dart';
 import '../../core/widgets/quick_action_card.dart';
 import '../../core/widgets/responsive_layout.dart';
+import '../../core/widgets/today_analyses_section.dart';
 
 class ChwDashboard extends StatelessWidget {
   final UserModel user;
@@ -78,6 +79,8 @@ class ChwDashboard extends StatelessWidget {
                           ),
                     ),
                   const SizedBox(height: 28),
+                  const TodayAnalysesSection(),
+                  const SizedBox(height: 20),
                   QuickActionCard(
                     icon: Icons.person_add_alt_1,
                     title: l10n.t('newPatient'),
