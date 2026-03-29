@@ -57,7 +57,16 @@ export async function fetchScanImageBlob(scanId) {
   const res = await fetch(`${API_BASE}/scans/${scanId}/image`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   })
-  if (!res.ok) throw new Error('Failed to load image')
+  if (!res.ok) {
+    let detail = ''
+    try {
+      const j = await res.json()
+      detail = typeof j.detail === 'string' ? j.detail : ''
+    } catch {
+      detail = res.statusText || ''
+    }
+    throw new Error(detail || `Failed to load image (${res.status})`)
+  }
   return res.blob()
 }
 

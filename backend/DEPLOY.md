@@ -51,6 +51,10 @@ Render free tier services **spin down after ~15 min of inactivity**. The first r
 2. **Render Cron Job** — Add a cron job that hits `/health` every 10 min.
 3. **Upgrade** — Paid plans don't spin down.
 
+### Scan images (dashboard referral view)
+
+Uploaded PNGs are stored on disk (default: repo `uploads/`). **Render’s free Web Service filesystem is ephemeral**; after a redeploy or new instance, files can disappear while the database still lists `has_image`, so the dashboard shows an error loading the image. **Fix for production:** attach a **persistent disk** (Render: paid Web Services support disks), mount it (e.g. `/var/carotid-uploads`), and set **`CAROTID_UPLOADS_DIR=/var/carotid-uploads`** on the API. New uploads are written there and survive deploys. Scans created before this change may still 404 until the file exists again or the scan is re-uploaded. Docker: bind-mount a volume and set the same env var.
+
 ### Flutter app
 
 Build with your Render API URL:

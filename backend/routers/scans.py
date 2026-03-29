@@ -25,8 +25,26 @@ from backend import latency as latency_tracker
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
-# Directory for storing scan images (overlay for doctor view). Create if missing.
-UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+def _uploads_dir() -> Path:
+    """
+    Directory for stored scan PNGs (clinician dashboard). Override with CAROTID_UPLOADS_DIR
+    in production so files survive deploys (e.g. Render persistent disk mounted at that path).
+    """
+    override = (os.getenv("CAROTID_UPLOADS_DIR") or "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    return _REPO_ROOT / "uploads"
+
+
+def _stored_png_path(scan: Scan) -> Path:
+    """Resolve on-disk path for a scan image; DB stores e.g. uploads/<scan_id>.png."""
+    name = Path(scan.image_path or "").name
+    if not name.endswith(".png"):
+        name = f"{scan.id}.png"
+    return _uploads_dir() / name
 
 
 def _review_fields(scan: Scan) -> dict:
@@ -78,8 +96,9 @@ def _demo_prediction(
 
 def _save_scan_image(scan_id: str, overlay_b64: str | None, original_bytes: bytes) -> str | None:
     try:
-        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-        path = UPLOADS_DIR / f"{scan_id}.png"
+        base = _uploads_dir()
+        base.mkdir(parents=True, exist_ok=True)
+        path = base / f"{scan_id}.png"
         if overlay_b64:
             data = base64.b64decode(overlay_b64)
         else:
@@ -467,7 +486,8 @@ def get_scan_image(
         patient = db.get(Patient, scan.patient_id)
         if not patient or patient.user_id != current_user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-    path = Path(__file__).resolve().parent.parent.parent / scan.image_path
+    path = _stored_png_path(scan)
     if not path.exists():
+        logger.warning("Scan image missing on disk: scan_id=%s path=%s", scan_id, path)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found")
     return FileResponse(path, media_type="image/png")

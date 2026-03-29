@@ -13,21 +13,21 @@ export default function ScanThumbnail({
   className = '',
 }) {
   const [url, setUrl] = useState(null)
-  const [err, setErr] = useState(false)
+  const [errMsg, setErrMsg] = useState(/** @type {string | null} */ (null))
   const [loading, setLoading] = useState(false)
   const urlRef = useRef(null)
 
   useEffect(() => {
     if (!hasImage || !scanId) {
       setUrl(null)
-      setErr(false)
+      setErrMsg(null)
       setLoading(false)
       return undefined
     }
 
     let cancelled = false
     setLoading(true)
-    setErr(false)
+    setErrMsg(null)
     fetchScanImageBlob(scanId)
       .then((blob) => {
         if (cancelled) return
@@ -36,8 +36,10 @@ export default function ScanThumbnail({
         urlRef.current = u
         setUrl(u)
       })
-      .catch(() => {
-        if (!cancelled) setErr(true)
+      .catch((e) => {
+        if (!cancelled) {
+          setErrMsg(e instanceof Error ? e.message : 'Failed to load image')
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -64,9 +66,14 @@ export default function ScanThumbnail({
 
   return (
     <div className={rootClass}>
-      {err && <span className="scan-thumbnail__err" title={alt} />}
-      {!err && loading && !url && <span className="scan-thumbnail__loading" />}
-      {url && !err && <img src={url} alt={alt} className="scan-thumbnail__img" />}
+      {errMsg && (
+        <div className="scan-thumbnail__err-wrap">
+          <span className="scan-thumbnail__err" title={errMsg} aria-hidden />
+          <p className="scan-thumbnail__err-msg">{errMsg}</p>
+        </div>
+      )}
+      {!errMsg && loading && !url && <span className="scan-thumbnail__loading" />}
+      {url && !errMsg && <img src={url} alt={alt} className="scan-thumbnail__img" />}
     </div>
   )
 }
