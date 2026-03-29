@@ -24,6 +24,14 @@ const RISK_COLORS = {
   Unknown: '#94a3b8',
 }
 
+/** YYYY-MM-DD in the browser's local calendar (avoid UTC/local mismatch from toISOString). */
+function localDateKeyFromDate(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 /** Local calendar day, aligned with Flutter TodayAnalysesSection. */
 function isCreatedAtToday(iso) {
   if (!iso) return false
@@ -50,8 +58,9 @@ export default function DashboardPage() {
   })
   const [loading, setLoading] = useState(true)
   /** @type {['all' | 'pending' | 'reviewed', React.Dispatch<React.SetStateAction<'all' | 'pending' | 'reviewed'>>]} */
+  /** Default `all` so new high-risk referrals are visible without switching tabs (pending still filterable). */
   const [reviewTab, setReviewTab] = useState(
-    /** @type {'all' | 'pending' | 'reviewed'} */ ('pending'),
+    /** @type {'all' | 'pending' | 'reviewed'} */ ('all'),
   )
 
   const fetchDashboard = useCallback(
@@ -95,8 +104,13 @@ export default function DashboardPage() {
     const onVis = () => {
       if (document.visibilityState === 'visible') fetchDashboard({ showLoading: false })
     }
+    const onFocus = () => fetchDashboard({ showLoading: false })
     document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
+    window.addEventListener('focus', onFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('focus', onFocus)
+    }
   }, [fetchDashboard])
 
   const filteredHighRisk = useMemo(() => {
@@ -144,19 +158,23 @@ export default function DashboardPage() {
     const byDay = {}
     const now = new Date()
     for (let i = 13; i >= 0; i--) {
-      const d = new Date(now)
-      d.setDate(d.getDate() - i)
-      const key = d.toISOString().slice(0, 10)
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+      const key = localDateKeyFromDate(d)
       byDay[key] = { date: key, scans: 0 }
     }
     allScans.forEach((s) => {
       if (!s.created_at) return
-      const day = s.created_at.slice(0, 10)
-      if (byDay[day]) byDay[day].scans++
+      const dt = new Date(s.created_at)
+      if (Number.isNaN(dt.getTime())) return
+      const day = localDateKeyFromDate(dt)
+      if (byDay[day] != null) byDay[day].scans++
     })
     return Object.values(byDay).map((r) => ({
       ...r,
-      label: new Date(r.date).toLocaleDateString(dateLocaleTag, { month: 'short', day: 'numeric' }),
+      label: new Date(r.date + 'T12:00:00').toLocaleDateString(dateLocaleTag, {
+        month: 'short',
+        day: 'numeric',
+      }),
     }))
   }, [allScans, dateLocaleTag])
 
