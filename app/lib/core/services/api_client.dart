@@ -238,6 +238,14 @@ class ApiClient {
 
   Future<ApiResponse<Map<String, dynamic>>> health() =>
       _request('GET', '/health');
+
+  /// Admin: clinicians/CHWs invited under the same hospital (includes your own account).
+  Future<ApiResponse<List<dynamic>>> getTeam() =>
+      _request('GET', '/auth/team');
+
+  /// Admin: accounts created via mobile self-registration (@carotidcheck.local).
+  Future<ApiResponse<List<dynamic>>> getMobileRegistrations() =>
+      _request('GET', '/auth/mobile-registrations');
 }
 
 class ApiResponse<T> {

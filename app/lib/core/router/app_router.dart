@@ -18,6 +18,7 @@ import '../../screens/settings/settings_screen.dart';
 import '../../screens/dashboard/chw_dashboard.dart';
 import '../../screens/dashboard/clinician_dashboard.dart';
 import '../../screens/dashboard/admin_dashboard.dart';
+import '../../screens/admin/accounts_screen.dart';
 import '../l10n/l10n_extension.dart';
 import '../models/user_model.dart';
 import '../models/patient_model.dart';
@@ -105,6 +106,10 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
                   );
                 },
                 routes: [
+                  GoRoute(
+                    path: 'accounts',
+                    builder: (context, state) => const AccountsScreen(),
+                  ),
                   GoRoute(
                     path: 'analyses',
                     builder: (context, state) => const AnalysesScreen(),

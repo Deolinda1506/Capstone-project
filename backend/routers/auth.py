@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
@@ -349,9 +350,31 @@ def list_team(
         .filter(
             User.hospital_id == current_user.hospital_id,
             User.is_deleted == False,
-            User.id != current_user.id,
         )
         .order_by(User.role, User.display_name)
+        .all()
+    )
+    return [_user_response(u, db) for u in users]
+
+
+@router.get("/mobile-registrations")
+def list_mobile_app_registrations(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """Admin: CHW accounts created via the mobile self-registration flow (placeholder @carotidcheck.local email)."""
+    if (current_user.role or "").lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can view mobile app registrations",
+        )
+    users = (
+        db.query(User)
+        .filter(
+            User.is_deleted == False,
+            User.email.like("%@carotidcheck.local"),
+        )
+        .order_by(desc(User.created_at))
         .all()
     )
     return [_user_response(u, db) for u in users]

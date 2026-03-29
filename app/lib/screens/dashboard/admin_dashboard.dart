@@ -64,6 +64,14 @@ class AdminDashboard extends StatelessWidget {
               const SizedBox(height: 28),
               const TodayAnalysesSection(),
               const SizedBox(height: 20),
+              QuickActionCard(
+                icon: Icons.groups_outlined,
+                title: context.l10n.t('accountsTitle'),
+                subtitle: context.l10n.t('accountsCardSubtitle'),
+                color: AppTheme.primaryBlue,
+                onTap: () => context.go('/accounts'),
+              ),
+              const SizedBox(height: 20),
               _SectionTitle(title: context.l10n.t('clinicalValidation')),
               const SizedBox(height: 14),
               QuickActionCard(
