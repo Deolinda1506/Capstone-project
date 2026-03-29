@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/l10n/l10n_extension.dart';
-import '../../core/models/user_role.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/services/referral_list_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -139,7 +138,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: Icon(Icons.logout, color: AppTheme.riskHigh),
                 title: Text(l10n.t('logout'), style: TextStyle(color: AppTheme.riskHigh, fontWeight: FontWeight.w600)),
-                onTap: () => auth.logout(),
+                onTap: () async {
+                  await auth.logout();
+                  if (!context.mounted) return;
+                  context.go('/login');
+                },
               ),
             ],
           ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../screens/onboarding/onboarding_screen.dart';
 import '../../screens/login/login_screen.dart';
 import '../../screens/register/register_screen.dart';
 import '../../screens/auth/forgot_password_screen.dart';
@@ -55,7 +54,7 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
     routes: [
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => OnboardingScreen(
+        builder: (context, state) => onboarding.OnboardingScreen(
           authService: authService,
           syncService: syncService,
         ),
@@ -105,6 +104,81 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
                     authService: authService,
                   );
                 },
+                routes: [
+                  GoRoute(
+                    path: 'analyses',
+                    builder: (context, state) => const AnalysesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'patients',
+                    builder: (context, state) => const PatientsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'detail',
+                        builder: (context, state) {
+                          final patient = state.extra as PatientModel?;
+                          final id = patient?.id?.trim();
+                          if (patient == null || id == null || id.isEmpty) {
+                            return Scaffold(
+                              appBar: AppBar(),
+                              body: Center(child: Text(context.l10n.t('error'))),
+                            );
+                          }
+                          return PatientDetailScreen(patient: patient);
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'referrals',
+                    builder: (context, state) => ReferralScreen(
+                      referringScanId: state.uri.queryParameters['scanId'],
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'hospitals',
+                        builder: (context, state) => HospitalsScreen(
+                          referringScanId: state.uri.queryParameters['scanId'],
+                        ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'patient',
+                    builder: (context, state) => const SizedBox.shrink(),
+                    routes: [
+                      GoRoute(
+                        path: 'capture',
+                        builder: (context, state) => const PatientCaptureScreen(),
+                      ),
+                      GoRoute(
+                        path: 'consent',
+                        builder: (context, state) {
+                          final patient = state.extra as PatientModel? ?? const PatientModel();
+                          return PatientConsentScreen(patient: patient);
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'scan',
+                    builder: (context, state) {
+                      final patient = state.extra as PatientModel?;
+                      return ScanScreen(patient: patient);
+                    },
+                  ),
+                  GoRoute(
+                    path: 'result/:scanId',
+                    builder: (context, state) {
+                      final scanId = state.pathParameters['scanId'] ?? '';
+                      final extra = state.extra as Map<String, dynamic>? ?? {};
+                      return ResultScreen(
+                        scanId: scanId,
+                        initialData: extra.isNotEmpty ? extra : null,
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -117,71 +191,6 @@ GoRouter createAppRouter(AuthService authService, SyncService syncService) {
             ],
           ),
         ],
-      ),
-      GoRoute(
-        path: '/analyses',
-        builder: (context, state) => const AnalysesScreen(),
-      ),
-      GoRoute(
-        path: '/patients',
-        builder: (context, state) => const PatientsScreen(),
-      ),
-      GoRoute(
-        path: '/patients/detail',
-        builder: (context, state) {
-          final patient = state.extra as PatientModel?;
-          final id = patient?.id?.trim();
-          if (patient == null || id == null || id.isEmpty) {
-            return Scaffold(
-              appBar: AppBar(),
-              body: Center(child: Text(context.l10n.t('error'))),
-            );
-          }
-          return PatientDetailScreen(patient: patient);
-        },
-      ),
-      GoRoute(
-        path: '/referrals',
-        builder: (context, state) => ReferralScreen(
-          referringScanId: state.uri.queryParameters['scanId'],
-        ),
-        routes: [
-          GoRoute(
-            path: 'hospitals',
-            builder: (context, state) => HospitalsScreen(
-              referringScanId: state.uri.queryParameters['scanId'],
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
-        path: '/patient/capture',
-        builder: (context, state) => const PatientCaptureScreen(),
-      ),
-      GoRoute(
-        path: '/patient/consent',
-        builder: (context, state) {
-          final patient = state.extra as PatientModel? ?? const PatientModel();
-          return PatientConsentScreen(patient: patient);
-        },
-      ),
-      GoRoute(
-        path: '/scan',
-        builder: (context, state) {
-          final patient = state.extra as PatientModel?;
-          return ScanScreen(patient: patient);
-        },
-      ),
-      GoRoute(
-        path: '/result/:scanId',
-        builder: (context, state) {
-          final scanId = state.pathParameters['scanId'] ?? '';
-          final extra = state.extra as Map<String, dynamic>? ?? {};
-          return ResultScreen(
-            scanId: scanId,
-            initialData: extra.isNotEmpty ? extra : null,
-          );
-        },
       ),
     ],
   );

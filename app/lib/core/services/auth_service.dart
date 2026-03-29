@@ -215,11 +215,16 @@ class AuthService extends ChangeNotifier {
     _error = null;
     _api.setToken(null);
     _api.onUnauthorized = null;
-    await _storage.delete(AppConstants.keyAuthToken);
-    await _storage.delete(AppConstants.keyOfflineToken);
-    await _storage.delete(AppConstants.keyUserData);
-    await _storage.delete(AppConstants.keyCachedPasswordHash);
+    // Notify before async storage so GoRouter (refreshListenable) redirects immediately.
     notifyListeners();
+    try {
+      await _storage.delete(AppConstants.keyAuthToken);
+      await _storage.delete(AppConstants.keyOfflineToken);
+      await _storage.delete(AppConstants.keyUserData);
+      await _storage.delete(AppConstants.keyCachedPasswordHash);
+    } catch (_) {
+      /* still signed out in memory */
+    }
   }
 
   void clearError() {
