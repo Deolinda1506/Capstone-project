@@ -47,7 +47,7 @@ I sincerely thank my supervisor, **Tunde Isiaq Gbadamosi**, for guidance through
 
 ## Abstract
 
-Stroke has become the third leading cause of death in Rwanda, with a median time from symptom onset to hospital arrival of 72 hours, far exceeding the critical 4.5-hour window for effective intervention. This “treatment vacuum” is driven by the lack of objective diagnostic tools at the community level and a fragmented referral chain. **Objectives** were to compare deep learning architectures for carotid segmentation, deploy the best model in a community-to-hospital workflow, and evaluate technical performance and referral visibility for clinicians. **Methodology** followed iterative Agile sprints: preprocessing and training on the Momot (2022) dataset, model comparison (ViT vs. Attention U-Net), integration into a FastAPI backend with PostgreSQL, a Flutter app for community health workers, a React web dashboard for clinicians, and structured testing from unit through acceptance. This research **proposed and implemented CarotidCheck**, a cloud-integrated solution that automates carotid artery segmentation and Intima-Media Thickness (IMT) measurement from ultrasound images when segmentation is adequate; otherwise it returns an explicit **non-measurement** outcome (**Unknown**). The system evaluated both architectures on Momot (2022), selecting Attention U-Net for deployment due to superior validation performance (Dice ~0.94, Mean IoU ~0.88). CarotidCheck supports **IMT-based risk stratification** and **NASCET-style stenosis when lumen geometry is available**—complementary to acute pathways such as **FAST**, which target suspected **acute** stroke rather than routine carotid screening. **Clinician awareness of pending high-risk referrals is provided in the web dashboard** through an in-app notification bell and badge: the dashboard calls the backend API on a timer and counts pending high-risk cases. On the deployed stack, inference latency can exceed the 5 s design target under free-tier cloud hosting (Chapter Five). **Conclusions:** CarotidCheck can support objective, **image-driven vascular screening and referral triage** at the community level, aligned with Rwanda’s Ministry of Health 4×4 Reform. **Recommendations** include field pilot validation, stronger **lumen/wall segmentation** so NASCET inputs apply on more scans, and integration of ultrasound metadata for improved IMT calibration.
+Stroke has become the third leading cause of death in Rwanda, with a median time from symptom onset to hospital arrival of 72 hours, far exceeding the critical 4.5-hour window for effective intervention. This “treatment vacuum” is driven by the lack of objective diagnostic tools at the community level and a fragmented referral chain. **Objectives** were to compare deep learning architectures for carotid segmentation, deploy the best model in a community-to-hospital workflow, and evaluate technical performance and referral visibility for clinicians. **Methodology** followed iterative Agile sprints: preprocessing and training on the Momot (2022) dataset, model comparison (ViT vs. Attention U-Net), integration into a FastAPI backend with PostgreSQL, a Flutter app for community health workers, a React web dashboard for clinicians, and structured testing from unit through acceptance. This research **proposed and implemented CarotidCheck**, a cloud-integrated solution that automates carotid artery segmentation and Intima-Media Thickness (IMT) measurement from ultrasound images when segmentation is adequate; otherwise it returns an explicit **non-measurement** outcome (**Unknown**). The deployed pipeline applies **post-segmentation plausibility checks** (e.g. edge-heavy or fragmented masks) so that clearly unreliable segmentations do not produce misleading overlays or IMT values. The system evaluated both architectures on Momot (2022), selecting Attention U-Net for deployment due to superior validation performance (Dice ~0.94, Mean IoU ~0.88). CarotidCheck supports **IMT-based risk stratification** and **NASCET-style stenosis when lumen geometry is available**—complementary to acute pathways such as **FAST**, which target suspected **acute** stroke rather than routine carotid screening. **Clinician awareness of pending high-risk referrals is provided in the web dashboard** through an in-app notification bell and badge: the dashboard calls the backend API on a timer and counts pending high-risk cases. On the deployed stack, inference latency can exceed the 5 s design target under free-tier cloud hosting (Chapter Five). **Conclusions:** CarotidCheck can support objective, **image-driven vascular screening and referral triage** at the community level, aligned with Rwanda’s Ministry of Health 4×4 Reform. **Recommendations** include field pilot validation, stronger **lumen/wall segmentation** so NASCET inputs apply on more scans, and integration of ultrasound metadata for improved IMT calibration.
 
 **Keywords:** Carotid ultrasound, Intima-Media Thickness, carotid triage, Attention U-Net, Vision Transformer, Rwanda, cloud-integrated diagnostics, NASCET
 
@@ -241,11 +241,15 @@ The main objective of this project was to develop CarotidCheck, a cloud-integrat
 
 ## 1.4 Research questions
 
-1. How can Vision Transformer (ViT) and Attention U-Net architectures be compared to measure artery walls accurately from carotid ultrasound images, even under poor lighting in rural Rwandan settings?
+**Primary (end-to-end):** Can a **machine learning–based** carotid segmentation pipeline—**comparing Vision Transformer (ViT) and Attention U-Net**, selecting the **best checkpoint by validation Dice**—together with a **cloud API and referral workflow**, deliver **usable segmentation metrics** and a **working referral path** for stroke-risk triage in Rwanda?
 
-2. Can cloud-based IMT measurement from carotid ultrasound add **objective vascular screening information** at the community level in a way that **non-imaging tools** (e.g. symptom checklists for acute presentation, or lifestyle risk scores) do not—recognizing that **FAST serves a different purpose** (suspected acute stroke) than **scheduled screening**?
+**Supporting questions:**
 
-3. How does a centralized online dashboard affect decision-making speed for doctors in Kigali, and can it help reduce the current 72-hour delay?
+1. How can **ViT** and **Attention U-Net** be compared fairly (same preprocessing, same metrics) so that artery-wall segmentation from carotid ultrasound remains robust under variable image quality in rural settings?
+
+2. Can **cloud-based IMT** from carotid ultrasound add **objective vascular screening information** at the community level in a way that **non-imaging tools** (e.g. symptom checklists for acute presentation, or lifestyle risk scores) do not—recognizing that **FAST** targets **suspected acute stroke**, not **scheduled screening**?
+
+3. How does a **centralized web dashboard** affect clinician awareness of high-risk cases in Kigali, and can it help narrow the **72-hour** community-to-hospital gap?
 
 ## 1.5 Project scope
 
@@ -371,7 +375,7 @@ The Momot (2022) Common Carotid Artery Ultrasound Dataset was used for training 
 
 ### Functional Requirements
 
-The system must allow Community Health Workers (CHWs) to register and log in, with support for online authentication and offline login after a first successful session. CHWs must be able to create and manage patients and to capture or upload carotid ultrasound images. The system must segment carotid artery walls and return **risk level** (Low, Moderate, High, or **Unknown** when IMT cannot be measured). It must return **IMT in millimetres when the mask passes quality checks**; otherwise IMT is absent (null) with a structured inference message (`inference_error`). **NASCET stenosis percentage** is returned **only when** the segmentation supports lumen diameters; otherwise stenosis is omitted (null)—the system does not infer stenosis from IMT alone. The result screen should display an **AI segmentation overlay when generation succeeds** (overlay may be absent on failure or low-confidence segmentation). **Clinicians must be able to see pending high-risk referrals through the web dashboard**, including an in-app notification indicator (bell and numeric badge) driven by periodic API requests to list pending high-risk cases. Clinicians must be able to view high-risk referrals and past scan results. The system must store scans and results for longitudinal tracking.
+The system must allow Community Health Workers (CHWs) to register and log in, with support for online authentication and offline login after a first successful session. CHWs must be able to create and manage patients and to capture or upload carotid ultrasound images. The system must segment carotid artery walls and return **risk level** (Low, Moderate, High, or **Unknown** when IMT cannot be measured). It must return **IMT in millimetres when the mask passes quality checks** (minimum foreground extent **and** plausibility checks for edge-heavy or fragmented segmentations); otherwise IMT is absent (null) with a structured inference message (`inference_error`). **NASCET stenosis percentage** is returned **only when** the segmentation supports lumen diameters; otherwise stenosis is omitted (null)—the system does not infer stenosis from IMT alone. The result screen should display an **AI segmentation overlay when generation succeeds** (overlay may be absent on failure or low-confidence segmentation). **Clinicians must be able to see pending high-risk referrals through the web dashboard**, including an in-app notification indicator (bell and numeric badge) driven by periodic API requests to list pending high-risk cases. Clinicians must be able to view high-risk referrals and past scan results. The system must store scans and results for longitudinal tracking.
 
 ### Non-Functional Requirements
 
@@ -587,7 +591,7 @@ The backend runs on Python 3.12 and uses FastAPI for the REST API with asynchron
 
 | Module | Responsibility |
 |--------|----------------|
-| `backend/inference.py` | Loads the Attention U-Net model, preprocesses input images (decode, square padding, resize to 256×256, normalization), performs segmentation, applies a **minimum foreground-pixel check** (rejects noise-level masks), computes IMT when geometry is valid (pixel-to-millimetre calibration), assigns risk (including **Unknown** when IMT is missing), derives **NASCET stenosis only when** lumen geometry is available, and optionally encodes a segmentation overlay. |
+| `backend/inference.py` | Loads the **Attention U-Net** (full `.keras` load when config and weights match; otherwise a **weight-aligned builder** + `load_weights` from `model.weights.h5`). Preprocesses input images (decode, square padding, resize to 256×256, normalization), runs inference, applies **minimum foreground** and **segmentation plausibility** checks (rejects edge-heavy / fragmented masks that would mislead IMT or overlay), computes IMT when geometry is valid, assigns risk (including **Unknown**), derives **NASCET stenosis only when** lumen geometry is available, and optionally encodes a segmentation overlay. |
 | `backend/routers/scans.py` | Handles `POST /scans/upload`; invokes the inference pipeline, stores scan results in the database, and updates pending referral state for in-app dashboard notifications. |
 | `backend/latency.py` | Monitors inference performance and exposes `GET /latency` for performance metrics. **Production:** [https://carotidcheck-api.onrender.com/latency](https://carotidcheck-api.onrender.com/latency) |
 | `app/lib/screens/` | Flutter UI: login, dashboard, scan capture, result display, referral list for CHWs. |
@@ -627,29 +631,13 @@ Testing was conducted to verify that the system meets both functional and non-fu
 
 Unit testing was conducted on individual modules such as authentication, image upload, and AI inference. Automated tests focused on the inference pipeline, verifying IMT calculation, NASCET stenosis formula, risk classification (**including the upper-threshold High band**), **structural failure** when foreground pixels fall below the minimum, and model integration using a stubbed Attention U-Net (no full `.keras` load in CI).
 
-**Pytest proof of passing tests (example run):**
+**Pytest proof of passing tests (example run from the repository test suite):**
 
 ```
-tests/test_inference.py::TestImtMmFromMask::test_empty_mask_returns_nan PASSED
-tests/test_inference.py::TestImtMmFromMask::test_single_wall_mask PASSED
-tests/test_inference.py::TestImtMmFromMask::test_spacing_scaling PASSED
-tests/test_inference.py::TestStenosisPctNascet::test_nascet_formula PASSED
-tests/test_inference.py::TestStenosisPctNascet::test_fully_patent PASSED
-tests/test_inference.py::TestStenosisPctNascet::test_fully_occluded PASSED
-tests/test_inference.py::TestStenosisPctNascet::test_invalid_distal_returns_nan PASSED
-tests/test_inference.py::TestStenosisPctNascet::test_clamped_to_0_100 PASSED
-tests/test_inference.py::TestRiskLevel::test_low_risk PASSED
-tests/test_inference.py::TestRiskLevel::test_moderate_risk PASSED
-tests/test_inference.py::TestRiskLevel::test_high_risk PASSED
-tests/test_inference.py::TestRiskLevel::test_exact_high_threshold_is_high PASSED
-tests/test_inference.py::TestValidationImtVsReference::test_imt_within_acceptable_variation PASSED
-tests/test_inference.py::TestModelInference::test_predict_imt_uses_model PASSED
-tests/test_inference.py::TestModelInference::test_predict_imt_fails_structural_check PASSED
-
-15 passed
+24 passed, 1 skipped, 1 warning in ~8 s
 ```
 
-All **15** inference unit tests passed, confirming mask geometry handling, NASCET math, risk bands, **minimum-segmentation behavioural checks**, and stubbed model integration.
+The suite includes **`tests/test_inference.py`** (IMT helpers, NASCET, risk bands, **structural and plausibility** failure paths, stubbed model), **`tests/test_api_health.py`**, **`tests/test_latency_unit.py`**, and **`tests/test_ml_model_integration.py`** (optional **`-m ml`** when the full `AttentionUNet.keras` artifact is present; one test may be skipped if ML is deselected). Together, these support **performance & validation** of the backend: **unit** logic, **API** health/latency shape, and **integration** of the inference path with the real checkpoint when available.
 
 ### 4.3.4 Validation testing outputs
 
@@ -749,11 +737,13 @@ In that sample, **mean ≈ 6.6 s** and **all runs exceeded the 5 s design target
 
 ### 5.2.1 Connection to Research Questions
 
-**Research Question 1:** Both architectures segment carotid artery walls from ultrasound images, but Attention U-Net achieves higher Dice and IoU, making it the preferred model. Data augmentation via Albumentations supports robustness to noise and lighting variations in rural settings.
+**Primary research question (machine learning + cloud pipeline):** The project compared **ViT** and **Attention U-Net** on held-out validation with **Dice** (and related metrics), deployed the **best checkpoint** (**Attention U-Net** in this study), and exposed inference through **FastAPI** with **PostgreSQL**, Flutter, and the clinician dashboard. **Segmentation metrics** meet the project bar on Momot-style validation; **referral visibility** is implemented via stored high-risk scans and dashboard polling. **End-to-end latency** on free-tier CPU can **exceed** the 5 s design target (§5.1.2), so “usable” here means **functionally correct and measurable**, with **documented** latency trade-offs—not that every deployment tier meets the latency goal.
 
-**Research Question 2:** CarotidCheck delivers objective, **image-driven IMT** when segmentation is adequate, and **NASCET stenosis when lumen geometry is available**—both support preclinical triage context. Unlike the FAST protocol, which detects post-onset stroke symptoms, CarotidCheck supports earlier **screening-oriented** intervention when measurements exist; **Unknown** outcomes explicitly flag non-measurement rather than guessing values.
+**Supporting question 1 (architecture comparison):** Both architectures segment carotid artery walls from ultrasound images, but **Attention U-Net** achieves higher Dice and IoU on the validation setup used here, making it the deployed model. Data augmentation via Albumentations supports robustness to noise and lighting variations in rural settings.
 
-**Research Question 3:** The React web dashboard provides **real-time awareness of high-risk cases** through API-polled in-app notifications (bell and badge counting pending referrals). Clinicians can access referrals, scan images, and patient histories in one place, reducing the delay between community screening and hospital action and helping to address the 72-hour “Treatment Vacuum.”
+**Supporting question 2 (objective screening vs non-imaging tools):** CarotidCheck delivers objective, **image-driven IMT** when segmentation is adequate, and **NASCET stenosis when lumen geometry is available**—both support **screening-oriented** triage. Unlike **FAST**, which targets **acute** focal symptoms, CarotidCheck supports **scheduled** vascular screening when measurements exist; **Unknown** outcomes (including plausibility and minimum-foreground failures) explicitly flag non-measurement rather than guessing values.
+
+**Supporting question 3 (dashboard and delay):** The React web dashboard improves **awareness of high-risk cases** through API-polled in-app notifications (bell and badge counting pending referrals). Clinicians can access referrals, scan images, and patient histories in one place, supporting faster follow-up than unstructured paper referral alone; narrowing the full **72-hour** delay still depends on **field logistics** and **ethics-approved** pilots beyond this software build.
 
 ### 5.2.2 Implications
 
@@ -782,9 +772,9 @@ This research developed and implemented **CarotidCheck**, a cloud-integrated sof
 4. **National alignment:** The solution aligns with Rwanda's Ministry of Health 4×4 Reform (Rwanda Ministry of Health, 2023), which emphasizes empowering the health workforce with digital tools to deliver specialized care at the community level.
 
 5. **Research questions answered:**  
-   - ViT and Attention U-Net can be compared for carotid segmentation, with Attention U-Net preferred for this project.  
+   - **Machine learning–based** segmentation (**ViT vs. Attention U-Net**, **best checkpoint = validation Dice**) can be integrated into a **cloud pipeline** that returns IMT, risk, and referral state; **Attention U-Net** was preferred on the validation metrics reported here.  
    - Cloud-based IMT adds **objective ultrasound biomarkers** at the community level for **screening-oriented triage**; this is **complementary** to **FAST**, which is optimized for **acute symptom recognition**, not the same clinical question.  
-   - A centralized web dashboard can improve clinician awareness of high-risk cases.  
+   - A centralized web dashboard can improve clinician awareness of high-risk cases; **measured latency** on free CPU may exceed the **5 s** design target (Chapter Five).  
 
 ## 6.2 Recommendations
 
