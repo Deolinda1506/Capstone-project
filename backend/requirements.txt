@@ -1,4 +1,4 @@
-# Carotid segmentation (Attention U-Net). Use Keras 3 (bundled in TF 2.17+). Do not set TF_USE_LEGACY_KERAS.
+# Carotid segmentation (Attention U-Net). ML/AttentionUNet.keras must be a consistent save (see ML/ATTENTION_UNET_CHECKPOINT.md).
 tensorflow>=2.17.0,<2.20.0
 numpy>=1.26.0,<2.0
 opencv-python-headless>=4.8.0

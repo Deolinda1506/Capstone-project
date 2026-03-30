@@ -35,8 +35,8 @@ else:
 def load_model():
     import tensorflow as tf
 
-    # Import custom layers so they are registered before load_model
     import sys
+
     _ml_root = _PROJECT_ROOT / "ML"
     if str(_ml_root) not in sys.path:
         sys.path.insert(0, str(_PROJECT_ROOT))
@@ -52,7 +52,6 @@ def load_model():
         "DecoderBlock": DecoderBlock,
         "AttentionGate": AttentionGate,
     }
-    # Keras 3 native load (ML/AttentionUNet.keras). safe_mode=False for custom layers.
     load_kw = dict(custom_objects=custom_objects, compile=False)
     try:
         model_obj = tf.keras.models.load_model(str(_MODEL_PATH), safe_mode=False, **load_kw)

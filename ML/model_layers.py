@@ -1,9 +1,11 @@
 """
-Custom Keras layers for ML/AttentionUNet.keras (saved with Keras 3.x).
+Custom Keras layers for ML/AttentionUNet.keras (must match training code that saved the checkpoint).
 
-Architecture matches the saved model graph: EncoderBlock (optional max-pool + skip),
-AttentionGate (Oktay-style; gate g is coarser than skip x), DecoderBlock (upsample g,
-concatenate with skip, two conv blocks).
+Architecture: EncoderBlock (optional max-pool + skip), AttentionGate (Oktay-style),
+DecoderBlock (upsample g, concat skip, two conv-BN-ReLU blocks).
+
+If load_model fails with BatchNormalization / Conv2D variable errors, the .keras file’s
+config and model.weights.h5 are mismatched — see ML/ATTENTION_UNET_CHECKPOINT.md.
 """
 
 from __future__ import annotations
@@ -28,7 +30,6 @@ class EncoderBlock(layers.Layer):
         self.pool = layers.MaxPooling2D(2)
 
     def build(self, input_shape):
-        # Required for Keras 3 / TF 2.2x so nested weights (BN gamma/beta/…) load from .keras files.
         self.conv1.build(input_shape)
         s1 = self.conv1.compute_output_shape(input_shape)
         self.bn1.build(s1)

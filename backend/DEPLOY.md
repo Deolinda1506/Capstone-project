@@ -29,12 +29,11 @@ Yes, you can deploy the backend. Follow this checklist.
 - The service must listen on Render’s **`PORT`** (set automatically). The Blueprint uses `sh -c` so `"${PORT}"` is always expanded.
 - TensorFlow startup can be slow; the app **skips ML preload when `RENDER=true`** so `/health` comes up quickly. The model loads on the first scan or `/ml-status`. To warm the model at boot (after deploy works), set **`SKIP_ML_PRELOAD=0`** in the service environment.
 
-**`Could not preload ML model` / BatchNormalization “0 variables” / `Functional`**
+**`Could not preload ML model` / BatchNormalization “0 variables” / many Conv2D errors**
 
-- **`ML/AttentionUNet.keras`** is saved with **Keras 3**. **Do not** set **`TF_USE_LEGACY_KERAS=1`** — it forces the **Keras 2** loader and breaks **BatchNormalization** weight restore (many layers show “expected 4 variables, received 0”).
-- Pin **`tensorflow>=2.17,<2.20`** in `backend/requirements.txt` (Keras 3 + good Linux wheels on Render). Avoid mixing in the standalone PyPI **`tf_keras`** package unless you know the checkpoint needs it.
-- **TF 2.15.x** on some hosts can fail to install fully → `No module named 'tensorflow.keras'`; use **3.11** and a pinned TF wheel as above.
-- Custom layers (`EncoderBlock`, `DecoderBlock`, `AttentionGate`) implement `build()` for nested weights in `.keras` files.
+- Often **`config.json` and `model.weights.h5` inside `ML/AttentionUNet.keras` do not match** (mixed exports). No TF/Keras pin fixes that. See **`ML/ATTENTION_UNET_CHECKPOINT.md`** and re-save the model from training using the same graph as **`ML/model_layers.py`**.
+- Pin **`tensorflow>=2.17,<2.20`** in `backend/requirements.txt`. Use **Python 3.11** on Render (`render.yaml`).
+- **Do not** set **`TF_USE_LEGACY_KERAS=1`** for this checkpoint unless you are intentionally using a **Keras 2**–only file.
 
 ### ML model (optional)
 

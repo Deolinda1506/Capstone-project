@@ -11,6 +11,7 @@ ML/segmentation_results.zip
 ML/unet_logs/
 ML/vit_logs/
 ML/AttentionViT.keras
+ML/_tmp_weights.h5
 *.class
 *.log
 *.pyc
