@@ -45,3 +45,9 @@ So the **weight file does not match** the **graph in config**. No TensorFlow pin
 4. Redeploy the API and confirm `GET /ml-status` returns `"ml_ready": true`.
 
 Until the checkpoint is consistent, the API will keep using the **demo** inference path and the app will **not** show the real green segmentation overlay.
+
+## Repo workaround: load `model.weights.h5` with a matching graph
+
+If you cannot re-export the zip yet, the backend can still use the **weights** inside `model.weights.h5` by building a Functional model whose **nested layer names** match that HDF5 tree (`ML/attention_unet_builder.py`) and calling `load_weights(..., by_name=True)` on the extracted file.
+
+**Keras 3 detail:** the temporary file used for extraction must use the suffix **`.h5`** only. A name ending in **`.weights.h5`** is treated as a different format and `load_weights(..., by_name=True)` raises *Invalid keyword arguments: {'by_name': True}*.

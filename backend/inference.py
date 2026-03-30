@@ -33,30 +33,42 @@ else:
 
 
 def load_model():
-    import tensorflow as tf
-
     import sys
+    import tensorflow as tf
 
     _ml_root = _PROJECT_ROOT / "ML"
     if str(_ml_root) not in sys.path:
         sys.path.insert(0, str(_PROJECT_ROOT))
-    from ML.model_layers import EncoderBlock, DecoderBlock, AttentionGate  # noqa: F401
 
     global model
     if model is not None:
         return model
     if not _MODEL_PATH.exists():
         raise FileNotFoundError(f"Model not found at {_MODEL_PATH}")
-    custom_objects = {
-        "EncoderBlock": EncoderBlock,
-        "DecoderBlock": DecoderBlock,
-        "AttentionGate": AttentionGate,
-    }
-    load_kw = dict(custom_objects=custom_objects, compile=False)
+
+    # 1) Prefer full zip load when config + weights match (future clean export).
     try:
-        model_obj = tf.keras.models.load_model(str(_MODEL_PATH), safe_mode=False, **load_kw)
-    except TypeError:
-        model_obj = tf.keras.models.load_model(str(_MODEL_PATH), **load_kw)
+        from ML.model_layers import EncoderBlock, DecoderBlock, AttentionGate  # noqa: F401
+
+        custom_objects = {
+            "EncoderBlock": EncoderBlock,
+            "DecoderBlock": DecoderBlock,
+            "AttentionGate": AttentionGate,
+        }
+        load_kw = dict(custom_objects=custom_objects, compile=False)
+        try:
+            model_obj = tf.keras.models.load_model(str(_MODEL_PATH), safe_mode=False, **load_kw)
+        except TypeError:
+            model_obj = tf.keras.models.load_model(str(_MODEL_PATH), **load_kw)
+    except Exception as e:
+        logger.warning(
+            "keras load_model failed (%s); using weight-aligned builder for notebook checkpoint.",
+            e,
+        )
+        from ML.attention_unet_builder import build_and_load_from_notebook_keras
+
+        model_obj = build_and_load_from_notebook_keras(_MODEL_PATH)
+
     model = model_obj
     print(f"✅ Attention U-Net model loaded from {_MODEL_PATH}")
     return model

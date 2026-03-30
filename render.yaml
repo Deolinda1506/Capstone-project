@@ -15,8 +15,10 @@ services:
     # Full stack: TensorFlow + OpenCV for Attention U-Net on /scans/upload (needs ML/AttentionUNet.keras + ML/model_layers.py in repo).
     # Free tier may OOM or hit disk limits; upgrade instance if build/runtime fails.
     buildCommand: pip install -r backend/requirements.txt
-    # sh -c ensures PORT is expanded; exec replaces shell so signals reach uvicorn.
-    startCommand: sh -c 'exec uvicorn backend.main:app --host 0.0.0.0 --port "${PORT}"'
+    # Match Render FastAPI docs; $PORT is expanded by Render (default 10000).
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    # Must stay cheap (no TensorFlow). Do NOT point this at /ml-status — that loads the model and can fail the 5s check or OOM on 512MB.
+    healthCheckPath: /health
 
     envVars:
       # TensorFlow has no wheels for Python 3.14+ yet; Render default is 3.14.x without this.
@@ -41,6 +43,9 @@ services:
         value: "1"
       - key: ALERT_QUEUE_POLL_SECONDS
         value: "5"
+      # Avoid loading TensorFlow + U-Net at startup (keeps deploy health checks fast; RENDER=true also skips preload in code).
+      - key: SKIP_ML_PRELOAD
+        value: "1"
 
   # Clinician web dashboard (Vite/React SPA → CDN). Build bakes in VITE_API_URL.
   - type: web
