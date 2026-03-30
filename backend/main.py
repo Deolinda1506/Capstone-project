@@ -1,6 +1,9 @@
 """FastAPI app: SQLAlchemy · Pydantic v2 · JWT · Attention U-Net. SQLite (dev) / PostgreSQL (prod)."""
 import logging
 import os
+
+# Before TensorFlow: Keras 2 weight loader for ML/AttentionUNet.keras (BatchNormalization on Linux/Render).
+os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
 import asyncio
 import time
 import uuid

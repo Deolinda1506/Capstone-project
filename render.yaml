@@ -19,6 +19,9 @@ services:
     startCommand: sh -c 'exec uvicorn backend.main:app --host 0.0.0.0 --port "${PORT}"'
 
     envVars:
+      # Keras 2 loader for AttentionUNet.keras (do not install PyPI `tf_keras` package).
+      - key: TF_USE_LEGACY_KERAS
+        value: "1"
       # TensorFlow has no wheels for Python 3.14+ yet; Render default is 3.14.x without this.
       - key: PYTHON_VERSION
         value: "3.11.11"

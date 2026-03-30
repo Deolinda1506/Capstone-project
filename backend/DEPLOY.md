@@ -29,10 +29,10 @@ Yes, you can deploy the backend. Follow this checklist.
 - The service must listen on Render’s **`PORT`** (set automatically). The Blueprint uses `sh -c` so `"${PORT}"` is always expanded.
 - TensorFlow startup can be slow; the app **skips ML preload when `RENDER=true`** so `/health` comes up quickly. The model loads on the first scan or `/ml-status`. To warm the model at boot (after deploy works), set **`SKIP_ML_PRELOAD=0`** in the service environment.
 
-**`Could not preload ML model` / BatchNormalization / `Functional` / `tf_keras` import errors**
+**`Could not preload ML model` / BatchNormalization / `Functional` / `tensorflow.keras` missing**
 
-- **`backend/requirements.txt`** pins **`tensorflow==2.15.1`** (bundles **Keras 2**). TensorFlow **2.16+** uses Keras 3 by default and the standalone **`tf_keras`** PyPI package can break loading this checkpoint (`Functional` / BN deserialization).
-- Do **not** add **`tf_keras`** from PyPI unless you know the model was exported for it.
+- Pin **`tensorflow==2.16.2`** (good **Linux aarch64/x86** wheels on Render). **TF 2.15.x** can fail to install completely on some hosts → `No module named 'tensorflow.keras'`.
+- Set **`TF_USE_LEGACY_KERAS=1`** (`main.py`, `inference.py`, `render.yaml`) so **Keras 2** restores BN weights from this checkpoint. **Do not** `pip install tf_keras` — that standalone package caused **`Functional` / tf_keras** import errors.
 - Custom layers (`EncoderBlock`, `DecoderBlock`, `AttentionGate`) implement `build()` so nested weights load from `.keras` files.
 
 ### ML model (optional)

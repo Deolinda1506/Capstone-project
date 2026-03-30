@@ -1,6 +1,6 @@
-# Carotid segmentation (Attention U-Net). TF 2.15 bundles Keras 2 and loads ML/AttentionUNet.keras
-# on Linux/Render. TF 2.16+ (Keras 3) + standalone `tf_keras` broke Functional/BN deserialization.
-tensorflow==2.15.1
+# Carotid segmentation (Attention U-Net). TF 2.16 has Linux wheels for Render (aarch64/x86).
+# TF_USE_LEGACY_KERAS=1 (main.py) loads BN weights. Do NOT pip install `tf_keras` — breaks Functional.
+tensorflow==2.16.2
 numpy>=1.23.5,<2.0
 opencv-python-headless>=4.8.0
 

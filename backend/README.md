@@ -21,7 +21,7 @@ pip install -r backend/requirements.txt
 ```
 
 **If TensorFlow fails to install** (`No matching distribution found`):
-- **Intel Mac (x86_64):** TensorFlow 2.17+ dropped macOS x86 builds. Use **Python 3.11** with `.venv311` (matches `requirements.txt`, which pins **TensorFlow 2.15.1** for Keras 2 / model load compatibility):
+- **Intel Mac (x86_64):** TensorFlow 2.17+ dropped macOS x86 builds. Use **Python 3.11** with `.venv311` (matches `requirements.txt`, which pins **TensorFlow 2.16.2** + `TF_USE_LEGACY_KERAS` for this checkpoint):
   ```bash
   python3.11 -m venv .venv311
   .venv311/bin/pip install -r backend/requirements.txt
@@ -40,7 +40,7 @@ If you already have `.venv` with dependencies installed, just activate it and ru
 
 **Important:** Run from the **project root** (the folder that contains `app/` and `backend/`), so Python can find the `backend` module.
 
-- **Real ML model (Intel Mac):** Use `.venv311` (TensorFlow 2.15.1 + Python 3.11)
+- **Real ML model (Intel Mac):** Use `.venv311` (TensorFlow 2.16.2 + Python 3.11)
 - **Other platforms:** Use `.venv` or `venv`
 
 ```bash
