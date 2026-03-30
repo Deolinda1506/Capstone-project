@@ -13,6 +13,7 @@ class AnalysisModel {
   final String? notes;
   final String? imagePath; // local path or URL for thumbnail
   final bool hasImage; // true when scan image is stored for doctor view
+  final bool hasAiOverlay; // true when stored image is green AI segmentation overlay
 
   const AnalysisModel({
     required this.id,
@@ -29,6 +30,7 @@ class AnalysisModel {
     this.notes,
     this.imagePath,
     this.hasImage = false,
+    this.hasAiOverlay = false,
   });
 
   factory AnalysisModel.fromJson(Map<String, dynamic> json) {
@@ -45,6 +47,7 @@ class AnalysisModel {
       notes: json['notes'] as String?,
       imagePath: json['image_path'] as String?,
       hasImage: json['has_image'] as bool? ?? false,
+      hasAiOverlay: json['has_ai_overlay'] as bool? ?? false,
     );
   }
 
@@ -61,5 +64,6 @@ class AnalysisModel {
         'notes': notes,
         'image_path': imagePath,
         'has_image': hasImage,
+        'has_ai_overlay': hasAiOverlay,
       };
 }

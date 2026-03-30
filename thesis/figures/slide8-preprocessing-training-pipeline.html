@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Slide 8 — Preprocessing &amp; training pipeline</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+  </script>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+    h1 { font-size: 1.25rem; }
+    p { color: #444; font-size: 0.9rem; }
+    .mermaid { margin: 1rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Slide 8 — Preprocessing &amp; training pipeline</h1>
+  <p>Open this file in a browser (double-click or drag into Chrome). Right-click the diagram → Save image as… (browser-dependent) or use a screenshot for PowerPoint.</p>
+
+  <div class="mermaid">
+flowchart LR
+  A[Raw Momot data<br/>Ultrasound PNG + expert mask] --> B[Preprocessing<br/>Grayscale / normalise [0,1]]
+  B --> C[Spatial prep<br/>Square pad → 256×256]
+  C --> D[Augmentation<br/>Albumentations:<br/>geom · noise · blur · CLAHE · crop]
+  D --> E[Train / Val split<br/>80% train · 20% val · seed 42]
+  E --> F[Training loop<br/>ViT · Attention U-Net]
+  F --> G[Loss & optimiser<br/>α·BCE + (1−α)·Dice<br/>Adam 1e-4 · cosine LR<br/>early stopping on val Dice]
+  G --> H[Outputs<br/>Best .keras checkpoints<br/>CSV logs · TensorBoard]
+  </div>
+</body>
+</html>

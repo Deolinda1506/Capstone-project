@@ -48,7 +48,7 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
       'analyzedAt': a.analyzedAt.toIso8601String(),
       if (imageBase64 != null) ...{
         'segmentationOverlayBase64': imageBase64,
-        'hasAiOverlay': true,
+        'hasAiOverlay': a.hasAiOverlay,
       },
     });
   }
@@ -78,6 +78,7 @@ class _AnalysesScreenState extends State<AnalysesScreen> {
             stenosisSource: m['stenosis_source'] as String?,
             plaqueDetected: m['plaque_detected'] as bool?,
             hasImage: m['has_image'] as bool? ?? false,
+            hasAiOverlay: m['has_ai_overlay'] as bool? ?? false,
           );
         }).toList();
         _loading = false;

@@ -70,6 +70,11 @@ def _ensure_sqlite_columns():
         if "stenosis_source" not in res_cols:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE results ADD COLUMN stenosis_source VARCHAR(32)"))
+        if "has_ai_overlay" not in res_cols:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("ALTER TABLE results ADD COLUMN has_ai_overlay BOOLEAN DEFAULT 0 NOT NULL")
+                )
     except Exception:
         pass
     try:
@@ -215,6 +220,7 @@ def _ensure_postgres_schema():
             for col, ddl in (
                 ("stenosis_pct", "DOUBLE PRECISION"),
                 ("stenosis_source", "VARCHAR(32)"),
+                ("has_ai_overlay", "BOOLEAN DEFAULT FALSE"),
             ):
                 if col not in rcols:
                     _ddl(f"ALTER TABLE results ADD COLUMN IF NOT EXISTS {col} {ddl}")

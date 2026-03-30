@@ -100,7 +100,7 @@ class _TodayAnalysesSectionState extends State<TodayAnalysesSection> with Widget
       'analyzedAt': m['created_at'],
       if (imageBase64 != null) ...{
         'segmentationOverlayBase64': imageBase64,
-        'hasAiOverlay': true,
+        'hasAiOverlay': m['has_ai_overlay'] as bool? ?? false,
       },
     });
   }

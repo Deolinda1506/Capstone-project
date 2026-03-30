@@ -71,7 +71,19 @@ class _ResultScreenState extends State<ResultScreen> {
     }
   }
 
+  bool _hasAiOverlayFromMap(Map<String, dynamic> raw) {
+    if (raw.containsKey('has_ai_overlay')) {
+      return raw['has_ai_overlay'] as bool? ?? false;
+    }
+    if (raw.containsKey('hasAiOverlay')) {
+      return raw['hasAiOverlay'] as bool? ?? false;
+    }
+    return false;
+  }
+
   Map<String, dynamic> _normalizeData(Map<String, dynamic> raw) {
+    final overlay =
+        raw['segmentationOverlayBase64'] ?? raw['segmentation_overlay_base64'];
     return {
       'risk': ((raw['risk_level'] ?? raw['risk']) as String? ?? 'low').toString().toLowerCase(),
       'imt': () {
@@ -86,9 +98,9 @@ class _ResultScreenState extends State<ResultScreen> {
       'patientIdentifier': (raw['patient_identifier'] ?? raw['patientIdentifier']) as String?,
       'patientAge': (raw['patient_age'] ?? raw['patientAge']) as int?,
       'analyzedAt': (raw['created_at'] ?? raw['analyzedAt']) as String?,
-      'segmentationOverlayBase64': raw['segmentationOverlayBase64'] as String?,
+      'segmentationOverlayBase64': overlay as String?,
       'originalImageBase64': raw['originalImageBase64'] as String?,
-      'hasAiOverlay': raw['hasAiOverlay'] as bool? ?? false,
+      'hasAiOverlay': _hasAiOverlayFromMap(raw),
     };
   }
 
@@ -98,19 +110,36 @@ class _ResultScreenState extends State<ResultScreen> {
     final res = await auth.api.getScanResult(widget.scanId);
     if (!mounted) return;
     if (res.success && res.data != null) {
-      final normalized = _normalizeData(res.data!);
+      final api = res.data!;
+      final normalized = _normalizeData(api);
       setState(() {
-        _data = {...?_data, ...normalized};
+        final prev = _data;
+        var merged = {...?_data, ...normalized};
+        if (merged['segmentationOverlayBase64'] == null &&
+            prev != null &&
+            prev['segmentationOverlayBase64'] != null) {
+          merged = {...merged, 'segmentationOverlayBase64': prev['segmentationOverlayBase64']};
+        }
+        if (!api.containsKey('has_ai_overlay') &&
+            !api.containsKey('hasAiOverlay') &&
+            prev != null &&
+            (prev['hasAiOverlay'] as bool? ?? false)) {
+          merged = {...merged, 'hasAiOverlay': true};
+        }
+        _data = merged;
         _loading = false;
         _error = null;
       });
-      if (res.data!['has_image'] == true &&
+      if (api['has_image'] == true &&
           (_data == null || _data!['segmentationOverlayBase64'] == null)) {
         final imgRes = await auth.api.getScanImage(widget.scanId);
         if (!mounted) return;
         if (imgRes.success && imgRes.data != null) {
           setState(() {
-            _data = {...(_data ?? {}), 'segmentationOverlayBase64': imgRes.data, 'hasAiOverlay': true};
+            _data = {
+              ...(_data ?? {}),
+              'segmentationOverlayBase64': imgRes.data,
+            };
           });
         }
       }

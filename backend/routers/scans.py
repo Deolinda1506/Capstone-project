@@ -199,6 +199,7 @@ async def upload_scan_image(
         is_high_risk=pred["is_high_risk"],
         stenosis_pct=pred.get("stenosis_pct"),
         stenosis_source=pred.get("stenosis_source"),
+        has_ai_overlay=bool(pred.get("has_ai_overlay", False)),
         model_version=pred.get("model_version") or "attention_unet",
     )
     db.add(scan)
@@ -304,6 +305,7 @@ def list_scans_with_results(
             "stenosis_source": r.stenosis_source,
             "plaque_detected": r.imt_mm is not None and r.imt_mm >= 0.9,
             "has_image": bool(s.image_path),
+            "has_ai_overlay": bool(getattr(r, "has_ai_overlay", False)),
             **_review_fields(s),
         }
         for s, r, p in rows
@@ -365,6 +367,7 @@ def list_high_risk_referrals(
             "stenosis_source": r.stenosis_source,
             "plaque_detected": r.imt_mm is not None and r.imt_mm >= 0.9,
             "has_image": bool(s.image_path),
+            "has_ai_overlay": bool(getattr(r, "has_ai_overlay", False)),
             **_review_fields(s),
         }
         for s, r, p in rows
@@ -422,6 +425,7 @@ def update_clinician_review(
         "stenosis_source": r.stenosis_source,
         "plaque_detected": r.imt_mm is not None and r.imt_mm >= 0.9,
         "has_image": bool(scan.image_path),
+        "has_ai_overlay": bool(getattr(r, "has_ai_overlay", False)),
         **_review_fields(scan),
     }
 
@@ -462,6 +466,7 @@ def get_scan_result(
         "stenosis_source": r.stenosis_source,
         "plaque_detected": r.imt_mm is not None and r.imt_mm >= 0.9,
         "has_image": bool(scan.image_path),
+        "has_ai_overlay": bool(getattr(r, "has_ai_overlay", False)),
         **_review_fields(scan),
     }
 
