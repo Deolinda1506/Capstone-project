@@ -13,10 +13,9 @@ import numpy as np
 # Disable MKL/OneDNN to avoid Floating Point Exception on Intel Mac (TF 2.16)
 os.environ.setdefault("TF_DISABLE_MKL", "1")
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
-# Keras 3 (TF 2.16+) often fails to load this repo's .keras (BatchNormalization weights).
-# Legacy Keras 2 deserialization matches weights from the training export. Must be set
-# before `import tensorflow` (only happens inside load_model()).
-os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
+# TensorFlow 2.15.x (pinned in requirements.txt) bundles Keras 2 and loads this .keras
+# reliably on Render. Do not install the separate `tf_keras` PyPI package — it breaks
+# Functional model deserialization with this checkpoint.
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _MODEL_PATH = _PROJECT_ROOT / "ML" / "AttentionUNet.keras"
@@ -55,7 +54,7 @@ def load_model():
         "DecoderBlock": DecoderBlock,
         "AttentionGate": AttentionGate,
     }
-    # safe_mode=False: allow legacy custom-layer checkpoints with Keras 3 (Render uses TF 2.16–2.19).
+    # TF 2.15: no safe_mode kwarg. TF 2.16+: safe_mode=False helps some Keras 3 checkpoints.
     load_kw = dict(custom_objects=custom_objects, compile=False)
     try:
         model_obj = tf.keras.models.load_model(str(_MODEL_PATH), safe_mode=False, **load_kw)

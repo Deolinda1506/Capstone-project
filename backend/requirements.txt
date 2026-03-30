@@ -1,8 +1,7 @@
-# Carotid segmentation (Attention U-Net). Pin 2.16.x + tf_keras 2.16: Keras 3 in TF 2.17+ can fail BN
-# weight load on Render unless TF_USE_LEGACY_KERAS=1 (set in main.py / inference.py).
-tensorflow==2.16.2
-tf_keras==2.16.0
-numpy>=1.24.0
+# Carotid segmentation (Attention U-Net). TF 2.15 bundles Keras 2 and loads ML/AttentionUNet.keras
+# on Linux/Render. TF 2.16+ (Keras 3) + standalone `tf_keras` broke Functional/BN deserialization.
+tensorflow==2.15.1
+numpy>=1.23.5,<2.0
 opencv-python-headless>=4.8.0
 
 # Backend: FastAPI · SQLAlchemy · Pydantic v2 · JWT

@@ -1,9 +1,6 @@
 """FastAPI app: SQLAlchemy · Pydantic v2 · JWT · Attention U-Net. SQLite (dev) / PostgreSQL (prod)."""
 import logging
 import os
-
-# Before any TensorFlow import: use Keras 2 loader so ML/AttentionUNet.keras weights load on Linux/Render.
-os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
 import asyncio
 import time
 import uuid
