@@ -25,15 +25,16 @@ DEFAULT_SPACING_MM_PER_PIXEL = 0.04
 # Segmentation too small to trust (noise / wrong field-of-view).
 MIN_FOREGROUND_PIXELS = 50
 
-# Reject masks that look like border speckle / fragmentation (not a vessel band).
-SEG_QC_BORDER_PX = 12
-SEG_QC_MAX_EDGE_FG_FRACTION = 0.38
-SEG_QC_MIN_LARGEST_CC_FRACTION = 0.58
-SEG_QC_MIN_COLUMNS_WITH_FG = 24
-SEG_QC_MIN_VALID_THICKNESS_FRAC = 0.45
-SEG_QC_MIN_THICKNESS_PX = 1.5
+# Reject masks that look like border speckle / heavy fragmentation (not a vessel band).
+# Carotid walls often appear as two disconnected blobs (near + far wall)—use top-2 CC mass, not largest-only.
+SEG_QC_BORDER_PX = 10
+SEG_QC_MAX_EDGE_FG_FRACTION = 0.50
+SEG_QC_MIN_TWO_LARGEST_CC_FRACTION = 0.66
+SEG_QC_MIN_COLUMNS_WITH_FG = 18
+SEG_QC_MIN_VALID_THICKNESS_FRAC = 0.38
+SEG_QC_MIN_THICKNESS_PX = 1.0
 SEG_QC_MAX_MEDIAN_THICKNESS_MM = 2.85
-SEG_QC_MIN_MEDIAN_THICKNESS_MM = 0.025
+SEG_QC_MIN_MEDIAN_THICKNESS_MM = 0.018
 
 logger = logging.getLogger(__name__)
 if _MODEL_PATH.exists():
@@ -234,20 +235,19 @@ def _segmentation_passes_plausibility(pred_class: np.ndarray, effective_spacing_
     if int(np.sum(fg & edge)) / total > SEG_QC_MAX_EDGE_FG_FRACTION:
         return False, "edge_concentrated"
 
-    ys, xs = np.where(fg)
-    cy, cx = float(np.mean(ys)), float(np.mean(xs))
-    margin = float(b) + 5.0
-    if cy < margin or cy > h - 1 - margin or cx < margin or cx > w - 1 - margin:
-        return False, "mass_on_image_edge"
-
     n_lab, _, stats, _ = cv2.connectedComponentsWithStats(
         (pred_class > 0).astype(np.uint8), connectivity=8
     )
     if n_lab < 2:
         return False, "no_components"
-    areas = stats[1:, cv2.CC_STAT_AREA]
-    largest = int(np.max(areas))
-    if largest / total < SEG_QC_MIN_LARGEST_CC_FRACTION:
+    areas = np.sort(stats[1:, cv2.CC_STAT_AREA].astype(np.float64))[::-1]
+    if len(areas) == 0:
+        return False, "no_components"
+    if len(areas) >= 2:
+        major_frac = float(areas[0] + areas[1]) / float(total)
+    else:
+        major_frac = float(areas[0]) / float(total)
+    if major_frac < SEG_QC_MIN_TWO_LARGEST_CC_FRACTION:
         return False, "fragmented"
 
     cols_with_fg = [x for x in range(w) if np.any(pred_class[:, x] > 0)]

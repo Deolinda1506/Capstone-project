@@ -175,4 +175,13 @@ class TestSegmentationPlausibility:
         m[248:256, 32:224] = 1
         ok, reason = inf._segmentation_passes_plausibility(m, effective_spacing_mm=0.06)
         assert ok is False
-        assert reason in ("edge_concentrated", "mass_on_image_edge")
+        assert reason == "edge_concentrated"
+
+    def test_two_wall_blobs_passes(self):
+        """Near + far wall as two components (~50/50)—must not be rejected as fragmented."""
+        m = np.zeros((256, 256), dtype=np.uint8)
+        m[88:98, 80:176] = 1
+        m[118:128, 80:176] = 1
+        ok, reason = inf._segmentation_passes_plausibility(m, effective_spacing_mm=0.06)
+        assert ok is True
+        assert reason == ""
