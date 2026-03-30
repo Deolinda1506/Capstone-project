@@ -1,5 +1,7 @@
-# Carotid segmentation (Attention U-Net). Pin below 2.20: TF 2.21+ often breaks loading this .keras with custom layers on Linux.
-tensorflow>=2.16.0,<2.20.0
+# Carotid segmentation (Attention U-Net). Pin 2.16.x + tf_keras 2.16: Keras 3 in TF 2.17+ can fail BN
+# weight load on Render unless TF_USE_LEGACY_KERAS=1 (set in main.py / inference.py).
+tensorflow==2.16.2
+tf_keras==2.16.0
 numpy>=1.24.0
 opencv-python-headless>=4.8.0
 

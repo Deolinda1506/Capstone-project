@@ -13,6 +13,10 @@ import numpy as np
 # Disable MKL/OneDNN to avoid Floating Point Exception on Intel Mac (TF 2.16)
 os.environ.setdefault("TF_DISABLE_MKL", "1")
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+# Keras 3 (TF 2.16+) often fails to load this repo's .keras (BatchNormalization weights).
+# Legacy Keras 2 deserialization matches weights from the training export. Must be set
+# before `import tensorflow` (only happens inside load_model()).
+os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _MODEL_PATH = _PROJECT_ROOT / "ML" / "AttentionUNet.keras"

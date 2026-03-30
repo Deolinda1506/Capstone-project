@@ -31,8 +31,9 @@ Yes, you can deploy the backend. Follow this checklist.
 
 **`Could not preload ML model` / BatchNormalization “expected 4 variables, received 0”**
 
-- Use the **pinned TensorFlow range** in `backend/requirements.txt` (below 2.20). TF **2.21+** often fails to load this `.keras` graph with custom layers on Linux.
-- Custom layers (`EncoderBlock`, `DecoderBlock`) implement `build()` so nested BN/Conv weights load under **Keras 3**.
+- The API sets **`TF_USE_LEGACY_KERAS=1`** (also in `render.yaml`) so TensorFlow uses the **Keras 2** deserializer for `ML/AttentionUNet.keras`. Keras 3 in TF 2.16+ can fail to restore BN weights on Linux without this.
+- **`backend/requirements.txt`** pins **`tensorflow==2.16.2`** and **`tf_keras==2.16.0`** for a reproducible load. Avoid TF **2.21+** for this checkpoint unless you re-export the model.
+- Custom layers (`EncoderBlock`, `DecoderBlock`, `AttentionGate`) implement `build()` so nested weights load from `.keras` files.
 
 ### ML model (optional)
 
