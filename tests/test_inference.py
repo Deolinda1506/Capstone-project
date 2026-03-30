@@ -99,7 +99,8 @@ class TestModelInference:
             def predict(self, batch, verbose=0):
                 _ = batch
                 out = np.zeros((1, 256, 256, 1), dtype=np.float32)
-                out[0, 100:112, 100:112, 0] = 0.9
+                # Wide enough band for plausibility QC (horizontal span + measurable thickness).
+                out[0, 100:118, 100:150, 0] = 0.9
                 return out
 
         monkeypatch.setattr(inf, "load_model", lambda: FakeModel())
@@ -137,3 +138,41 @@ class TestModelInference:
         assert result["risk_level"] == "Unknown"
         assert "error" in result
         assert result["is_high_risk"] is False
+
+    def test_predict_imt_fails_plausibility_bottom_speckle(self, monkeypatch, minimal_png_bytes):
+        """Border-heavy mask should not return overlay or IMT."""
+
+        class FakeModel:
+            def predict(self, batch, verbose=0):
+                _ = batch
+                out = np.zeros((1, 256, 256, 1), dtype=np.float32)
+                out[0, 248:256, 20:220, 0] = 0.95
+                return out
+
+        monkeypatch.setattr(inf, "load_model", lambda: FakeModel())
+        result = inf.predict_imt(
+            minimal_png_bytes,
+            spacing_mm_per_pixel=inf.DEFAULT_SPACING_MM_PER_PIXEL,
+            return_segmentation_overlay=False,
+            patient_age=None,
+        )
+        assert result.get("success") is False
+        assert result.get("has_ai_overlay") is False
+        assert result.get("segmentation_overlay_base64") is None
+        assert "quality" in (result.get("error") or "").lower()
+
+
+class TestSegmentationPlausibility:
+    def test_central_band_passes(self):
+        m = np.zeros((256, 256), dtype=np.uint8)
+        m[100:120, 96:160] = 1
+        ok, reason = inf._segmentation_passes_plausibility(m, effective_spacing_mm=0.06)
+        assert ok is True
+        assert reason == ""
+
+    def test_bottom_edge_band_fails(self):
+        m = np.zeros((256, 256), dtype=np.uint8)
+        m[248:256, 32:224] = 1
+        ok, reason = inf._segmentation_passes_plausibility(m, effective_spacing_mm=0.06)
+        assert ok is False
+        assert reason in ("edge_concentrated", "mass_on_image_edge")

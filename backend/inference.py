@@ -25,6 +25,16 @@ DEFAULT_SPACING_MM_PER_PIXEL = 0.04
 # Segmentation too small to trust (noise / wrong field-of-view).
 MIN_FOREGROUND_PIXELS = 50
 
+# Reject masks that look like border speckle / fragmentation (not a vessel band).
+SEG_QC_BORDER_PX = 12
+SEG_QC_MAX_EDGE_FG_FRACTION = 0.38
+SEG_QC_MIN_LARGEST_CC_FRACTION = 0.58
+SEG_QC_MIN_COLUMNS_WITH_FG = 24
+SEG_QC_MIN_VALID_THICKNESS_FRAC = 0.45
+SEG_QC_MIN_THICKNESS_PX = 1.5
+SEG_QC_MAX_MEDIAN_THICKNESS_MM = 2.85
+SEG_QC_MIN_MEDIAN_THICKNESS_MM = 0.025
+
 logger = logging.getLogger(__name__)
 if _MODEL_PATH.exists():
     logger.info("ML model found at %s", _MODEL_PATH)
@@ -202,6 +212,66 @@ def _imt_mm_from_mask(mask, spacing_mm_per_pixel):
     return float(np.nanmean(thickness) * spacing_mm_per_pixel)
 
 
+def _segmentation_passes_plausibility(pred_class: np.ndarray, effective_spacing_mm: float) -> tuple[bool, str]:
+    """
+    Heuristic QC: carotid wall masks should form a coherent band with mass off the frame edge.
+    Fails edge-heavy speckle and tiny fragments that still clear MIN_FOREGROUND_PIXELS.
+    """
+    if pred_class.ndim != 2 or pred_class.shape[0] != pred_class.shape[1]:
+        return False, "invalid_mask_shape"
+    h, w = pred_class.shape
+    fg = pred_class > 0
+    total = int(np.sum(fg))
+    if total < MIN_FOREGROUND_PIXELS:
+        return False, "too_small"
+
+    b = SEG_QC_BORDER_PX
+    edge = np.zeros_like(fg, dtype=bool)
+    edge[:b, :] = True
+    edge[-b:, :] = True
+    edge[:, :b] = True
+    edge[:, -b:] = True
+    if int(np.sum(fg & edge)) / total > SEG_QC_MAX_EDGE_FG_FRACTION:
+        return False, "edge_concentrated"
+
+    ys, xs = np.where(fg)
+    cy, cx = float(np.mean(ys)), float(np.mean(xs))
+    margin = float(b) + 5.0
+    if cy < margin or cy > h - 1 - margin or cx < margin or cx > w - 1 - margin:
+        return False, "mass_on_image_edge"
+
+    n_lab, _, stats, _ = cv2.connectedComponentsWithStats(
+        (pred_class > 0).astype(np.uint8), connectivity=8
+    )
+    if n_lab < 2:
+        return False, "no_components"
+    areas = stats[1:, cv2.CC_STAT_AREA]
+    largest = int(np.max(areas))
+    if largest / total < SEG_QC_MIN_LARGEST_CC_FRACTION:
+        return False, "fragmented"
+
+    cols_with_fg = [x for x in range(w) if np.any(pred_class[:, x] > 0)]
+    if len(cols_with_fg) < SEG_QC_MIN_COLUMNS_WITH_FG:
+        return False, "insufficient_horizontal_span"
+
+    inner, outer = _get_interfaces_from_mask(pred_class)
+    thickness = np.abs(outer - inner)
+    valid_col = [
+        x
+        for x in cols_with_fg
+        if np.isfinite(thickness[x]) and float(thickness[x]) >= SEG_QC_MIN_THICKNESS_PX
+    ]
+    if len(valid_col) / max(len(cols_with_fg), 1) < SEG_QC_MIN_VALID_THICKNESS_FRAC:
+        return False, "no_measurable_wall_band"
+
+    med_px = float(np.median([float(thickness[x]) for x in valid_col]))
+    med_mm = med_px * effective_spacing_mm
+    if med_mm > SEG_QC_MAX_MEDIAN_THICKNESS_MM or med_mm < SEG_QC_MIN_MEDIAN_THICKNESS_MM:
+        return False, "implausible_wall_thickness"
+
+    return True, ""
+
+
 def _overlay_segmentation_on_image(original_gray: np.ndarray, mask_256: np.ndarray) -> bytes:
     """
     Draw green semi-transparent wall overlay on the original grayscale image.
@@ -288,6 +358,32 @@ def predict_imt(
             "success": False,
             "error": (
                 "Structure not detected. Please ensure the ultrasound is centered on the carotid artery."
+            ),
+            "imt_mm": None,
+            "stenosis_pct": None,
+            "stenosis_source": None,
+            "risk_level": "Unknown",
+            "is_high_risk": False,
+            "foreground_prob": round(foreground_prob, 3),
+            "inference_time_sec": round(t1 - t0, 4),
+            "pixel_spacing_mm": round(float(effective_spacing), 4),
+            "pixel_spacing_source": pixel_spacing_source,
+            "segmentation_overlay_base64": None,
+            "has_ai_overlay": False,
+        }
+
+    ok_seg, seg_reason = _segmentation_passes_plausibility(pred_class, effective_spacing)
+    if not ok_seg:
+        logger.warning(
+            "Segmentation failed plausibility QC (%s); not returning overlay or IMT.",
+            seg_reason,
+        )
+        t1 = time.perf_counter()
+        return {
+            "success": False,
+            "error": (
+                "Segmentation quality was too low for a reliable measurement. "
+                "Use a clear long-axis carotid view with the artery centered in the frame."
             ),
             "imt_mm": None,
             "stenosis_pct": None,
