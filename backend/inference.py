@@ -13,8 +13,7 @@ import numpy as np
 # Disable MKL/OneDNN to avoid Floating Point Exception on Intel Mac (TF 2.16)
 os.environ.setdefault("TF_DISABLE_MKL", "1")
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
-# Must be set before `import tensorflow` (see main.py). Do not `pip install tf_keras` — breaks load_model.
-os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
+# Do NOT set TF_USE_LEGACY_KERAS: ML/AttentionUNet.keras is saved with Keras 3; legacy Keras 2 cannot restore BN weights.
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _MODEL_PATH = _PROJECT_ROOT / "ML" / "AttentionUNet.keras"
@@ -53,7 +52,7 @@ def load_model():
         "DecoderBlock": DecoderBlock,
         "AttentionGate": AttentionGate,
     }
-    # TF 2.16+: safe_mode=False when Keras 3 path is used; legacy Keras 2 may omit the kwarg (TypeError).
+    # Keras 3 native load (ML/AttentionUNet.keras). safe_mode=False for custom layers.
     load_kw = dict(custom_objects=custom_objects, compile=False)
     try:
         model_obj = tf.keras.models.load_model(str(_MODEL_PATH), safe_mode=False, **load_kw)

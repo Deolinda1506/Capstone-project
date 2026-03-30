@@ -1,7 +1,6 @@
-# Carotid segmentation (Attention U-Net). TF 2.16 has Linux wheels for Render (aarch64/x86).
-# TF_USE_LEGACY_KERAS=1 (main.py) loads BN weights. Do NOT pip install `tf_keras` — breaks Functional.
-tensorflow==2.16.2
-numpy>=1.23.5,<2.0
+# Carotid segmentation (Attention U-Net). Use Keras 3 (bundled in TF 2.17+). Do not set TF_USE_LEGACY_KERAS.
+tensorflow>=2.17.0,<2.20.0
+numpy>=1.26.0,<2.0
 opencv-python-headless>=4.8.0
 
 # Backend: FastAPI · SQLAlchemy · Pydantic v2 · JWT

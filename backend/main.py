@@ -1,9 +1,6 @@
 """FastAPI app: SQLAlchemy · Pydantic v2 · JWT · Attention U-Net. SQLite (dev) / PostgreSQL (prod)."""
 import logging
 import os
-
-# Before TensorFlow: Keras 2 weight loader for ML/AttentionUNet.keras (BatchNormalization on Linux/Render).
-os.environ.setdefault("TF_USE_LEGACY_KERAS", "1")
 import asyncio
 import time
 import uuid
@@ -434,12 +431,25 @@ def health_db():
 @app.get("/ml-status")
 def ml_status():
     """Check if ML model is loaded (required for real AI overlay)."""
+    tf_ver: str | None = None
+    try:
+        import tensorflow as tf
+
+        tf_ver = tf.__version__
+    except Exception:
+        pass
     try:
         from backend.inference import load_model
+
         load_model()
-        return {"ml_ready": True, "overlay_available": True}
+        return {"ml_ready": True, "overlay_available": True, "tensorflow_version": tf_ver}
     except Exception as e:
-        return {"ml_ready": False, "overlay_available": False, "error": str(e)}
+        return {
+            "ml_ready": False,
+            "overlay_available": False,
+            "tensorflow_version": tf_ver,
+            "error": str(e),
+        }
 
 
 @app.get("/latency")

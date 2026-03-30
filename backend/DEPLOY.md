@@ -29,11 +29,12 @@ Yes, you can deploy the backend. Follow this checklist.
 - The service must listen on Render’s **`PORT`** (set automatically). The Blueprint uses `sh -c` so `"${PORT}"` is always expanded.
 - TensorFlow startup can be slow; the app **skips ML preload when `RENDER=true`** so `/health` comes up quickly. The model loads on the first scan or `/ml-status`. To warm the model at boot (after deploy works), set **`SKIP_ML_PRELOAD=0`** in the service environment.
 
-**`Could not preload ML model` / BatchNormalization / `Functional` / `tensorflow.keras` missing**
+**`Could not preload ML model` / BatchNormalization “0 variables” / `Functional`**
 
-- Pin **`tensorflow==2.16.2`** (good **Linux aarch64/x86** wheels on Render). **TF 2.15.x** can fail to install completely on some hosts → `No module named 'tensorflow.keras'`.
-- Set **`TF_USE_LEGACY_KERAS=1`** (`main.py`, `inference.py`, `render.yaml`) so **Keras 2** restores BN weights from this checkpoint. **Do not** `pip install tf_keras` — that standalone package caused **`Functional` / tf_keras** import errors.
-- Custom layers (`EncoderBlock`, `DecoderBlock`, `AttentionGate`) implement `build()` so nested weights load from `.keras` files.
+- **`ML/AttentionUNet.keras`** is saved with **Keras 3**. **Do not** set **`TF_USE_LEGACY_KERAS=1`** — it forces the **Keras 2** loader and breaks **BatchNormalization** weight restore (many layers show “expected 4 variables, received 0”).
+- Pin **`tensorflow>=2.17,<2.20`** in `backend/requirements.txt` (Keras 3 + good Linux wheels on Render). Avoid mixing in the standalone PyPI **`tf_keras`** package unless you know the checkpoint needs it.
+- **TF 2.15.x** on some hosts can fail to install fully → `No module named 'tensorflow.keras'`; use **3.11** and a pinned TF wheel as above.
+- Custom layers (`EncoderBlock`, `DecoderBlock`, `AttentionGate`) implement `build()` for nested weights in `.keras` files.
 
 ### ML model (optional)
 
