@@ -4,6 +4,232 @@ AI-powered carotid ultrasound screening for stroke risk assessment in Rwanda. Co
 
 **Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · [Latency stats](https://carotidcheck-api.onrender.com/latency) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com](https://carotidcheck-dashboard.onrender.com) (see `render.yaml`) · **Android APK (Google Drive):** [app-release.apk](https://drive.google.com/file/d/13zI5Jj2Ycf1280hRFSSBl9bhABMODMUz/view?usp=sharing) · **Demo video:** [5-min demo](https://drive.google.com/file/d/1cF0XLiqFo-9NMABwXhOqR2R74O_6UWwN/view?usp=sharing)
 
+**Course submission — source repository:** [https://github.com/Deolinda1506/Capstone-project](https://github.com/Deolinda1506/Capstone-project) · **Clone URL:** `https://github.com/Deolinda1506/Capstone-project.git` (branch `main`). The capstone report text is maintained in [`thesis/CAROTIDCHECK-FINAL-REPORT.md`](thesis/CAROTIDCHECK-FINAL-REPORT.md); the signed PDF submitted to the LMS is exported from the institutional Word template using that content.
+
+---
+
+## Contents
+
+| Section | What it is for |
+|---------|----------------|
+| **[Installation and dependencies](#installation-and-dependencies)** | What to install on your machine before running anything |
+| **[Reviewer and moderator guide](#reviewer-and-moderator-guide)** | Shortest path to clone, run API, and verify |
+| **[Quick Start](#quick-start)** | Full step-by-step (backend, Flutter, dashboard, tests) |
+| **[Configuration](#configuration)** | Environment variables (`backend/.env`) |
+| **[Deployment](#deployment)** | Render / APK / Flutter web |
+| **[Project structure](#project-structure)** | Folders and main files |
+
+---
+
+## Installation and dependencies
+
+Install tools **once** per machine, then use the **virtual environment** for Python so project packages do not conflict with system Python.
+
+### 1. System tools (install in this order)
+
+| Tool | Minimum / recommended | Role | Where to get it |
+|------|------------------------|------|-----------------|
+| **Git** | 2.x | Clone the repo | [git-scm.com](https://git-scm.com) |
+| **Python** | **3.10, 3.11, or 3.12** | Backend API, tests, ML | [python.org](https://www.python.org/downloads/) or `pyenv` (this repo’s `.python-version` pins **3.11.11** for consistency with production) |
+| **pip** | Bundled with Python | Installs Python packages | — |
+| **Node.js** | **18.x or 20.x LTS** | Clinician web dashboard (`web-dashboard/`) | [nodejs.org](https://nodejs.org) |
+| **npm** | Comes with Node | Installs JS dependencies | — |
+| **Flutter** | **3.x**, Dart **3.10+** | Mobile/web CHW app (`app/`) | [docs.flutter.dev/get-started/install](https://docs.flutter.dev/get-started/install) — run `flutter doctor` and fix any reported issues |
+
+**Optional:** **Docker** is not required; the project runs natively with `uvicorn` and local SQLite/Postgres.
+
+### 2. Python: two dependency bundles (pick one)
+
+All commands below assume you are in the **repository root** (`Capstone-project/`) and use a **venv**.
+
+```bash
+# Create venv (use python3.11 or python3.12 if available)
+python3 -m venv venv
+
+# macOS / Linux
+source venv/bin/activate
+
+# Windows (Command Prompt / PowerShell)
+# venv\Scripts\activate
+```
+
+| File | Command | Approx. install size | When to use |
+|------|---------|----------------------|-------------|
+| [`backend/requirements.txt`](backend/requirements.txt) | `pip install -r backend/requirements.txt` | **~2–3 GB** (TensorFlow, OpenCV, etc.) | **Full CarotidCheck:** real Attention U-Net inference, IMT, green overlay on `/scans/upload`. Requires [`ML/AttentionUNet.keras`](ML/AttentionUNet.keras) at runtime. |
+| [`backend/requirements-api.txt`](backend/requirements-api.txt) | `pip install -r backend/requirements-api.txt` | **~50 MB** | **API + DB + auth** only; inference may use **stub/demo** behaviour without TensorFlow. Good for reviewers with limited disk or quick API smoke tests. |
+
+**Tests:** `requirements.txt` includes **pytest** and **httpx**. If you only installed `requirements-api.txt`, run `pip install pytest httpx` before `pytest`.
+
+### 3. Flutter app dependencies
+
+From repo root:
+
+```bash
+cd app
+flutter pub get
+```
+
+This installs everything declared in [`app/pubspec.yaml`](app/pubspec.yaml). No extra global tools beyond the Flutter SDK.
+
+### 4. Web dashboard dependencies
+
+```bash
+cd web-dashboard
+npm ci
+```
+
+Use **`npm ci`** for a clean, reproducible install from the lockfile; **`npm install`** also works if you prefer.
+
+### 5. ML model file (real AI overlay)
+
+- **Path:** `ML/AttentionUNet.keras`  
+- **Purpose:** Loaded by `backend/inference.py` for segmentation and IMT.  
+- **Size:** Large (may be tracked with **Git LFS** or added locally—see repo notes). If missing, `/ml-status` reports the model as unavailable and behaviour falls back per `backend/main.py` / inference stubs.
+
+### 6. Environment file (backend)
+
+- Copy [`backend/.env.example`](backend/.env.example) to `backend/.env` and adjust **SECRET_KEY**, **DATABASE_URL**, and optional **SMTP_*** for your environment.  
+- Never commit `.env` (secrets).
+
+### 7. End-to-end “everything installed” checklist
+
+| Step | Command / check |
+|------|------------------|
+| 1 | `git clone https://github.com/Deolinda1506/Capstone-project.git` && `cd Capstone-project` |
+| 2 | Create venv, `pip install -r backend/requirements.txt` **or** `requirements-api.txt` |
+| 3 | `cp backend/.env.example backend/.env` (optional for local dev) |
+| 4 | `uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000` → open `/docs` |
+| 5 | `cd app && flutter pub get` → `flutter run` with correct `API_BASE_URL` |
+| 6 | `cd web-dashboard && npm ci && npm run dev` → open Vite dev server |
+| 7 | `PYTHONPATH=. python3 -m pytest tests/ -v -m "not ml"` (from repo root, venv active) |
+
+For a **minimal** moderator path (API + health check only), follow **[Reviewer and moderator guide](#reviewer-and-moderator-guide)** below.
+
+---
+
+## Reviewer and moderator guide
+
+Use this section to **review and run** the project without reading the whole README. Estimated time: **~10 minutes** for API-only smoke checks; **~30–45 minutes** for backend + Flutter + dashboard + tests (depending on downloads).
+
+### What this repository contains
+
+| Layer | Path | Purpose |
+|--------|------|---------|
+| Mobile client | [`app/`](app/) | Flutter (CHW flows: login, patients, scan upload, results, referrals) |
+| REST API | [`backend/`](backend/) | FastAPI, JWT auth, PostgreSQL/SQLite, inference |
+| ML assets | [`ML/`](ML/) | `AttentionUNet.keras` (deployed model), notebooks, training helpers |
+| Clinician UI | [`web-dashboard/`](web-dashboard/) | React + Vite (referrals, analyses) |
+| Docs | [`docs/system-architecture.md`](docs/system-architecture.md) | Architecture overview |
+
+### Prerequisites (install before clone)
+
+| Tool | Version | Notes |
+|------|---------|--------|
+| **Git** | any | Required |
+| **Python** | **3.10–3.12** recommended | Match [`render.yaml`](render.yaml) / production; 3.9 may skip some API tests |
+| **Node.js** | **18+** | For `web-dashboard` (`npm ci`) |
+| **Flutter** | **3.x**, Dart **3.10+** | For `app/`; optional if you only verify the API |
+| **TensorFlow** | via `pip` | Only if using `backend/requirements.txt` (full ML); large download |
+
+### Step A — Clone and open the repo
+
+```bash
+git clone https://github.com/Deolinda1506/Capstone-project.git
+cd Capstone-project
+```
+
+### Step B — Backend (choose one)
+
+**B1 — Fastest review (API + stub inference, small install)**
+
+```bash
+python3 -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
+pip install -r backend/requirements-api.txt
+cp backend/.env.example backend/.env   # optional; edit SECRET_KEY for anything beyond local smoke tests
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+- Open **http://127.0.0.1:8000/docs** — interactive API.
+- **http://127.0.0.1:8000/health** → `{"status":"ok"}`.
+- **http://127.0.0.1:8000/ml-status** — shows whether a real model is loaded (without `ML/AttentionUNet.keras`, overlay may be unavailable).
+
+**B2 — Full stack matching production (real segmentation overlay)**
+
+```bash
+pip install -r backend/requirements.txt
+# Ensure ML/AttentionUNet.keras is present (large file; may use Git LFS — see .gitattributes / project notes)
+uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Re-check **`/ml-status`**: `ml_ready` / `overlay_available` should reflect a loaded model.
+
+### Step C — Automated tests (from repo root)
+
+`backend/requirements.txt` includes **pytest** and **httpx**. If you only installed `requirements-api.txt`, add test tools first:
+
+```bash
+pip install pytest httpx
+```
+
+Then:
+
+```bash
+source venv/bin/activate
+PYTHONPATH=. python3 -m pytest tests/ -v -m "not ml"
+```
+
+- **Fast suite** (no full TensorFlow graph load): `-m "not ml"`.
+- **Full ML smoke** (requires `ML/AttentionUNet.keras`, slow on CPU):  
+  `PYTHONPATH=. python3 -m pytest tests/ -v -m ml`
+
+### Step D — Flutter app (optional)
+
+```bash
+cd app
+flutter pub get
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000
+```
+
+Use **`http://10.0.2.2:8000`** as `API_BASE_URL` when the backend runs on the host and the app runs on an **Android emulator**. For a quick review without a device, **Swagger** (`/docs`) plus the **web dashboard** (Step E) is enough.
+
+### Step E — Clinician web dashboard (optional)
+
+```bash
+cd web-dashboard
+npm ci
+# Optional: echo 'VITE_API_URL=http://localhost:8000' > .env
+npm run dev
+```
+
+Open **http://localhost:5173** — login with a **staff** account created via your environment (see backend seeding / registration flow in [`backend/README.md`](backend/README.md) if present, or register through the API).
+
+### Step F — How to know it “worked”
+
+| Check | URL / command | Success |
+|--------|----------------|--------|
+| API up | `GET /health` | `status: ok` |
+| Docs | `/docs` | Swagger UI loads |
+| ML | `GET /ml-status` | JSON explains model/overlay readiness |
+| Tests | `pytest tests/ -m "not ml"` | Exit code 0 |
+| Latency stats | `GET /latency` | JSON with counts (after some inference calls) |
+
+### Common issues
+
+| Symptom | Likely cause | What to do |
+|---------|----------------|------------|
+| `ModuleNotFoundError` | Wrong venv / skipped `pip install` | Activate `venv` and install the chosen `requirements*.txt` |
+| Port 8000 in use | Another process | Use `--port 8001` and set `API_BASE_URL` / `VITE_API_URL` accordingly |
+| Flutter `ERR_CONNECTION_REFUSED` | Backend not running or wrong URL | Start `uvicorn`; use `--dart-define=API_BASE_URL=...` matching your host |
+| No overlay / Unknown risk on real scans | Model missing, QC failed, or view not long-axis | Confirm `ML/AttentionUNet.keras`; see `backend/inference.py` plausibility checks |
+| `pytest` skips on Python 3.9 | Version guard | Use **Python 3.10+** for the full app test import path |
+
+### Deeper documentation
+
+- **Architecture:** [`docs/system-architecture.md`](docs/system-architecture.md)  
+- **Backend env vars:** [`backend/.env.example`](backend/.env.example)  
+- **Deployment:** [`render.yaml`](render.yaml) and the **Deployment** section below  
+
 ---
 
 ## Quick Start
@@ -17,10 +243,8 @@ AI-powered carotid ultrasound screening for stroke risk assessment in Rwanda. Co
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/<your-org>/CarotidCheck.git
-cd CarotidCheck
-# or
-cd "CarotidCheck app"
+git clone https://github.com/Deolinda1506/Capstone-project.git
+cd Capstone-project
 ```
 
 ### Step 2: Backend Setup
@@ -160,7 +384,7 @@ Open http://localhost:5173. Login with Staff ID (e.g. `0102-001`) and password. 
 ## Project Structure
 
 ```
-CarotidCheck app/
+Capstone-project/   # repository root
 ├── app/                    # Flutter frontend
 │   ├── lib/
 │   │   ├── core/           # Config, models, router, services, theme
@@ -387,9 +611,9 @@ The repository should contain everything needed to run CarotidCheck locally or d
 **Clone and run:**
 
 ```bash
-git clone https://github.com/<org>/CarotidCheck.git
-cd CarotidCheck
-# Follow Quick Start above
+git clone https://github.com/Deolinda1506/Capstone-project.git
+cd Capstone-project
+# Follow Quick Start or Reviewer and moderator guide above
 ```
 
 ---
