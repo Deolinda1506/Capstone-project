@@ -2,9 +2,9 @@
 
 AI-powered carotid ultrasound screening for stroke risk assessment in Rwanda. Community health workers capture scans, get instant IMT (intima-media thickness) and risk levels, and refer high-risk patients to hospitals.
 
-**Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · [Latency stats](https://carotidcheck-api.onrender.com/latency) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com](https://carotidcheck-dashboard.onrender.com) (see `render.yaml`) · **Android APK (Google Drive):** [app-release.apk](https://drive.google.com/file/d/13zI5Jj2Ycf1280hRFSSBl9bhABMODMUz/view?usp=sharing) · **Demo video:** [5-min demo](https://drive.google.com/file/d/1cF0XLiqFo-9NMABwXhOqR2R74O_6UWwN/view?usp=sharing)
+**Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · [Latency stats](https://carotidcheck-api.onrender.com/latency) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com/dashboard](https://carotidcheck-dashboard.onrender.com/dashboard) (see `render.yaml`) · **Android APK (Google Drive):** [app-release.apk](https://drive.google.com/file/d/1ZEFX7sM3_fsFJEZmSHGprKq9zI0tH5wm/view?usp=sharing) · **Demo video:** [5-min demo](https://drive.google.com/file/d/1cF0XLiqFo-9NMABwXhOqR2R74O_6UWwN/view?usp=sharing) · **UI (Figma):** [CarotidCheck design file](https://www.figma.com/design/2RBiCJEMMr291thKV9nfnI/CarotidCheck?node-id=0-1)
 
-**Course submission — source repository:** [https://github.com/Deolinda1506/Capstone-project](https://github.com/Deolinda1506/Capstone-project) · **Clone URL:** `https://github.com/Deolinda1506/Capstone-project.git` (branch `main`). The capstone report text is maintained in [`thesis/CAROTIDCHECK-FINAL-REPORT.md`](thesis/CAROTIDCHECK-FINAL-REPORT.md); the signed PDF submitted to the LMS is exported from the institutional Word template using that content.
+**Course submission — source repository:** [https://github.com/Deolinda1506/Capstone-project](https://github.com/Deolinda1506/Capstone-project) · **Clone URL:** `https://github.com/Deolinda1506/Capstone-project.git` (branch `main`).
 
 ---
 
@@ -15,9 +15,12 @@ AI-powered carotid ultrasound screening for stroke risk assessment in Rwanda. Co
 | **[Installation and dependencies](#installation-and-dependencies)** | What to install on your machine before running anything |
 | **[Reviewer and moderator guide](#reviewer-and-moderator-guide)** | Shortest path to clone, run API, and verify |
 | **[Quick Start](#quick-start)** | Full step-by-step (backend, Flutter, dashboard, tests) |
+| **[Project structure](#project-structure)** | Folders and main files |
+| **[API overview](#api-inputoutput-mapping)** | Main REST endpoints (full detail in Swagger `/docs`) |
+| **[Requirements and testing](#requirements-and-testing-summary)** | Tests and where to read evaluation details (comparison table, ML notebook) |
+| **[Comparative results](#comparative-results-attention-u-net-vs-vision-transformer)** | ViT vs Attention U-Net (validation metrics) |
 | **[Configuration](#configuration)** | Environment variables (`backend/.env`) |
 | **[Deployment](#deployment)** | Render / APK / Flutter web |
-| **[Project structure](#project-structure)** | Folders and main files |
 
 ---
 
@@ -327,13 +330,7 @@ cd app && flutter test -d macos integration_test/login_real_api_test.dart \
 # optional: --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
 ```
 
-**macOS Keychain (`-34018`) / unsigned desktop builds:** the test clears prefs and best-effort clears secure storage before login. On a **sandboxed, unsigned** macOS app, `FlutterSecureStorage.deleteAll()` may hit *“A required entitlement isn’t present”*; the test ignores that error and continues. If a **saved session** is still in Keychain, you may skip the login screen and see a confusing failure—pick one of these:
-
-1. **Manual reset:** Keychain Access → search `com.carotidcheck.carotidCheck` or “CarotidCheck” → remove related items → run again with real `E2E_*` defines.
-2. **Other devices:** run the same test on **Android or iOS** (`flutter test … -d <device>`), where `deleteAll()` usually works.
-3. **Signed macOS:** in Xcode, set a **Development Team** for the Runner target, add **`keychain-access-groups`** to `macos/Runner/DebugProfile.entitlements` and `Release.entitlements` (array entry `$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)`), then rebuild—Keychain clear works without manual cleanup (**requires** proper signing, not `CODE_SIGN_IDENTITY = -`).
-
-On macOS you may see `Failed to foreground app; open returned 1` while tests still **pass**—that only means the runner could not bring the window to the front; the run itself succeeded.
+**macOS Keychain / unsigned desktop builds:** Flutter integration tests may need Keychain clearing or a signed app build; see Flutter secure-storage docs if `E2E_*` tests behave oddly.
 
 **Key endpoints (Swagger):**
 - [Create patient](http://localhost:8000/docs#/patients/create_patient_patients_post) — `POST /patients`
@@ -433,116 +430,17 @@ Capstone-project/   # repository root
 
 **Auth:** All protected endpoints except `/auth/*`, `/health` require `Authorization: Bearer <token>`.
 
----
-
-## Use Case to Implementation Mapping
-
-This section maps the functional requirements (use cases) from the system design to their implementation in code. It describes *how* each use case is implemented, not the results or validation.
-
-| Use Case | FR | Implementation |
-|----------|-----|----------------|
-| **Register and log in** | FR1 | `POST /auth/register` → `backend/routers/auth.py`; `POST /auth/login` → JWT. Flutter: `app/lib/screens/login/login_screen.dart`, `register/register_screen.dart`. Offline login: cached credentials in `AuthService` (`app/lib/core/services/auth_service.dart`). |
-| **Create and manage patients** | FR2 | `POST /patients` → `backend/routers/patients.py`; `GET /patients` for list. Flutter: `patient_capture_screen.dart`, `patients_screen.dart`. Patient identifier (e.g. CC-0001) or auto-generated PT-XXXXXXXX. |
-| **Capture or upload carotid ultrasound** | FR3 | `POST /scans/upload` (multipart: `patient_id`, `file`). Flutter: `scan_screen.dart` → `image_picker` (camera/gallery) → `ApiClient.uploadScan()`. Image stored in `uploads/` for clinician review. |
-| **Segment artery walls and return IMT, risk, stenosis** | FR4 | `backend/inference.py` → `predict_imt()`: pad → resize 256×256 → Attention U-Net → mask → IMT (mm). Risk: Low &lt;0.9 mm, Moderate 0.9–1.2 mm, High &gt;1.2 mm. NASCET stenosis in `inference.py`. |
-| **Display AI segmentation overlay** | FR5 | `ScanUploadResponse.segmentation_overlay_base64` returned from `/scans/upload`; `ResultScreen` displays `Image.memory(base64Decode(...))`. Stored overlay: `GET /scans/{id}/image` for clinician dashboard. |
-| **High-risk visibility + alerts** | FR6 | **In-app:** web dashboard polls `GET /scans/high-risk` → bell, badge, banner (`web-dashboard/src/context/PendingReferralsContext.jsx`). **Email:** `backend/email_service.py` when `pred["is_high_risk"]` and SMTP configured. SMS not used. |
-| **Clinician view high-risk referrals and past scan results** | FR7 | `GET /scans/high-risk` → `hospital_dashboard_screen.dart`; `GET /scans/with-results` → `analyses_screen.dart`. `GET /scans/{id}/image` fetches stored overlay for result view. `ReferralCard` → `ResultScreen` with image. |
-| **Store scan and result for longitudinal tracking** | FR8 | `Scan` and `Result` models in `backend/models/`; `scans.py` stores scan + result in DB. Image stored in `uploads/{scan_id}.png`. `image_path` in DB; `has_image` in list responses. |
+**Use cases and FR traceability:** See [`docs/system-architecture.md`](docs/system-architecture.md).
 
 ---
 
-## Requirements traceability and validation
+## Requirements and testing summary
 
-This section supports **requirements traceability** (each FR is tied to evidence) and **user acceptance testing (UAT)** (stakeholders confirm behaviour in realistic conditions). It complements [Use Case to Implementation Mapping](#use-case-to-implementation-mapping), which describes *where* features live in code.
-
-### Requirements traceability matrix (RTM)
-
-| FR | Use case | Verification method | Evidence / artifact |
-|----|----------|---------------------|---------------------|
-| **FR1** | Register and log in | Automated E2E; API/unit where applicable | Flutter: `app/integration_test/login_real_api_test.dart` (real API). Web: `web-dashboard/e2e/login-dashboard.spec.js` (Playwright). Backend: exercise `POST /auth/login`, `POST /auth/register` via `/docs` or scripted calls. |
-| **FR2** | Create and manage patients | Manual / integration; API contract | `POST /patients`, `GET /patients` (`/docs`). Flutter: patient capture and list screens in `app/lib/screens/patient/`, `patients/`. |
-| **FR3** | Capture or upload ultrasound | Manual UAT; E2E optional | Flutter `scan_screen.dart` + `POST /scans/upload`. Confirm stored file and DB row in test environment. |
-| **FR4** | Segment artery, IMT, risk, stenosis | Automated unit & ML integration | `tests/test_inference.py`, `tests/test_latency_unit.py`; full graph: `tests/test_ml_model_integration.py` (`pytest -m ml`, requires `ML/AttentionUNet.keras`). |
-| **FR5** | Display AI segmentation overlay | Automated (pipeline); UI UAT | Upload response / `GET /scans/{id}/image` includes overlay; `ResultScreen` + web dashboard image column. |
-| **FR6** | High-risk in-app + optional email | Manual / UAT | Web: bell, badge, poll (`PendingReferralsContext`). Email: SMTP when configured (see `.env.example`). |
-| **FR7** | Clinician referrals and past results | Automated E2E; manual walkthrough | Web: Playwright login + dashboard (`web-dashboard` E2E). Flutter: hospital dashboard / analyses flows. API: `GET /scans/high-risk`, `GET /scans/with-results`. |
-| **FR8** | Store scan and result for tracking | API / DB checks | Persistence via `scans` router and models; confirm with repeated `GET` and file under `uploads/` after upload. |
-
-**Coverage gaps (honest scope):** the RTM lists the *primary* evidence for each FR; several areas still rely on manual checks, Swagger, or a single E2E path rather than exhaustive automation.
-
-| Area | Current state | Typical next step |
-|------|----------------|-------------------|
-| **Backend API** | `tests/test_api_health.py` exercises `/`, `/health`, `/latency` only—not full auth/patient/scan flows. | Add pytest cases with `TestClient`: register/login, `POST /patients`, `POST /scans/upload` (small fixture image), role-scoped list endpoints. |
-| **Inference / ML** | Strong unit coverage in `test_inference.py` / `test_latency_unit.py`; optional real checkpoint in `test_ml_model_integration.py`. | Keep `-m ml` in CI when the `.keras` file is available; optional golden-output tolerances for regression. |
-| **Flutter** | A few unit/widget tests (`test/widget_test.dart`, model tests under `test/core/`); no broad screen coverage. | More widget specs for login, scan, and result flows; keep `integration_test/login_real_api_test.dart` as API smoke. |
-| **Web dashboard** | Vitest: `LandingPage.test.jsx`; Playwright: login → dashboard when env creds are set. | Add component tests for critical tables/cards; optional second E2E for referral detail. |
-| **FR6 (in-app + email)** | In-app list/badge verified in UI; email validated via SMTP when enabled. | UAT walkthrough; optional integration test behind env flags. |
-| **UAT** | By definition not fully automatable; scenarios in the table below are the formal acceptance layer. | Maintain a short signed checklist per release or pilot. |
-
-### User acceptance testing (UAT)
-
-**Goal:** Confirm that **real users** (or proxies such as clinical supervisors) can complete end-to-end workflows on a **staging or pilot** deployment without blocking defects.
-
-| Element | Guidance |
-|--------|----------|
-| **Roles** | **CHW:** register/login (if applicable), create patient, capture/upload scan, view result, refer if high risk. **Clinician:** login to web dashboard, open high-risk list, open analysis detail / image. **Admin** (if used): access admin views per role design. |
-| **Environment** | Same API base as pilot (e.g. Render deployment); test accounts only; SMTP/email test inboxes where possible. |
-| **Scenario format** | For each scenario: *preconditions*, *steps*, *expected result* (map to FR ID), *pass/fail*, *date*, *tester*, *notes*. |
-| **Example scenarios (map to RTM)** | (1) CHW logs in → creates patient → uploads image → sees IMT/risk/overlay (FR1–FR5, FR8). (2) Clinician logs into dashboard → sees referral/high-risk data → opens stored scan image (FR7). (3) New high-risk case appears in **in-app** notifications (bell/badge); referral email only if SMTP is on (FR6). |
-| **Exit criteria** | Agreed set of scenarios **passed**; critical defects **fixed or waived** with documented risk; optional **sign-off** (name, role, date) on a short UAT summary or checklist. |
-
-UAT is **not** a substitute for automated regression tests: use the RTM above to keep automated checks and UAT scenarios aligned so changes do not silently break requirements.
-
-### Test metrics (targets vs achieved)
-
-Use this style of table in reports and capstone documentation: **metric**, **acceptance target**, **measured value**, **status**. Numbers below tie to the evaluation in `thesis/CAROTIDCHECK-FINAL-REPORT.md` (§5.1); refresh **Achieved** when you re-run validation or read [`GET /latency`](https://carotidcheck-api.onrender.com/latency).
-
-| Test metric | Target | Achieved | Status |
-|-------------|--------|----------|--------|
-| **Segmentation quality (Dice, Attention U-Net, Momot validation)** | ≥ 0.85 | ~0.946 ([Comparative results](#comparative-results-attention-u-net-vs-vision-transformer)) | ✓ Passed |
-| **Mean IoU (Attention U-Net, validation)** | — (reported for comparison) | ~0.949 ([same table](#comparative-results-attention-u-net-vs-vision-transformer)) | Recorded |
-| **Inference latency (end-to-end, design goal)** | &lt; 5 s per scan | Environment-dependent; CPU cloud samples may **exceed** 5 s (e.g. mean ~6.6 s for *n* = 6 in §5.1.2) | ⚠ See note |
-| **Usability (e.g. SUS or structured UAT score)** | ≥ 80% (if you adopt this threshold) | From pilot / UAT (fill in) | — |
-
-**Latency note:** The **&lt; 5 s** goal is a design target for responsive triage; free-tier / CPU-only hosting often misses it. Improve with GPU, paid tier, quantization, or warm-up—see thesis discussion.
-
-**Example (generic QA-style row set — illustrative only):** some submissions use classification-style “accuracy” and response-time rows; replace targets and achieved values with definitions that match your study (e.g. Dice as “model accuracy”, API p95 from load tests, SUS from questionnaires).
-
-| Test metric | Target | Achieved | Status |
-|-------------|--------|----------|--------|
-| Accuracy | ≥ 95% | 97% | ✓ Passed |
-| Response time | &lt; 2 seconds | 1.5 seconds | ✓ Passed |
-| Usability score | ≥ 80% | 85% | ✓ Passed |
-
----
-
-## Related Files
-
-| File / Folder | Purpose |
-|--------------|---------|
-| `backend/main.py` | FastAPI app entry, `/health`, `/ml-status` |
-| `backend/inference.py` | Attention U-Net inference, overlay generation |
-| `backend/routers/` | Auth, patients, scans endpoints |
-| `app/lib/screens/` | Flutter UI (login, dashboard, scan, result, referral, hospital dashboard) |
-| `app/lib/core/` | Config, API client, services, theme |
-| `ML/notebooks/Carotid_Artery_Segmentation_Models_Comparison.ipynb` | ViT vs Attention U-Net comparison, IMT, stroke risk |
-| `ML/AttentionUNet.keras` | Trained Attention U-Net model (best from ViT vs U-Net comparison) |
-| `render.yaml` | Render deployment blueprint |
-
----
-
-## Core Functionality
-
-| Feature | Description |
-|---------|-------------|
-| **Patient registration** | Create patients with identifier (e.g. CC-0001) |
-| **Carotid scan upload** | Camera or gallery → upload to backend |
-| **AI analysis** | IMT (mm), risk level (Low/Moderate/High), plaque detection |
-| **Segmentation overlay** | Green overlay on scan (when ML model is loaded) |
-| **Referrals** | High-risk patients → referral list, hospital map |
-| **Hospital dashboard** | High-risk referrals, analyses, quick actions |
-| **Role-based dashboards** | CHW, Clinician, Admin views |
+| Topic | Where to look |
+|-------|----------------|
+| Automated tests | `tests/` — run `PYTHONPATH=. python3 -m pytest tests/ -v -m "not ml"` (fast; add `-m ml` if `ML/AttentionUNet.keras` is present). |
+| Segmentation metrics (Dice, IoU) | [Comparative results](#comparative-results-attention-u-net-vs-vision-transformer) table below and [`ML/notebooks/Carotid_Artery_Segmentation_Models_Comparison.ipynb`](ML/notebooks/Carotid_Artery_Segmentation_Models_Comparison.ipynb) |
+| Latency | [`GET /latency`](https://carotidcheck-api.onrender.com/latency) when the API is deployed; a design target of &lt; 5 s per scan may be exceeded on free-tier CPU. |
 
 ---
 
@@ -557,64 +455,6 @@ Validation-style metrics from the model comparison (training pipeline / Momot da
 | **Absolute difference** (U-Net − ViT) | 0.0528 | 0.0043 | 0.1055 | 0.1559 | 0.0801 |
 
 *Accuracy* here is **pixel-level** classification accuracy on the segmentation task (foreground/background labels), not clinical diagnostic accuracy.
-
----
-
-## Analysis
-
-**Figure 5.3 (thesis) from your database:** after scans exist in SQLite/Postgres, run  
-`PYTHONPATH=. python3 scripts/render_figure_5_3_from_db.py`  
-(requires `sqlalchemy`, `python-dotenv`; uses `DATABASE_URL` or `data/carotidcheck.db`). Refreshes `thesis/figures/figure-5.3-risk-distribution.svg` and `.png` (macOS `qlmanage`). See also `GET /scans/risk-distribution`.
-
-**Mapping implementation (CarotidCheck/StrokeLink) to proposal objectives:**
-
-### Objective 1: Literature review and technical baselines
-- **Achieved:** Attention U-Net selected as best model (vs ViT) from comparison; Momot dataset used for training (see `ML/notebooks/Carotid_Artery_Segmentation_Models_Comparison.ipynb`); IMT thresholds defined (Low <0.9 mm, Moderate 0.9–1.2 mm, High >1.2 mm; NASCET-aligned); preprocessing with padding, resize, Albumentations.
-- **How:** ViT and Attention U-Net were compared; Attention U-Net achieved higher Dice/IoU. The Momot dataset (1100 image–mask pairs) enabled training. IMT thresholds align with clinical guidelines for stroke risk stratification.
-- **Status:** Met.
-
-### Objective 2: Develop the cloud-integrated solution
-- **Achieved:** Preprocessing pipeline (pad, resize, normalize); FastAPI backend with Attention U-Net; Flutter app for CHWs with patient registration, scan upload, risk stratification, referral list, hospital dashboard.
-- **How:** CHWs upload scans via the app → backend preprocesses and runs Attention U-Net inference → IMT and risk level are returned → high-risk patients can be added to the referral list; clinicians see incoming referrals on the hospital dashboard. Cloud-synchronized data flows through the FastAPI backend.
-- **Status:** Met.
-
-### Objective 3: Verify and validate with measurable metrics
-- **Achieved:** Technical metrics (IMT in mm, risk level, plaque heuristic); problem-centric validation (high-risk referral flow, hospital dashboard, Gasabo District scope).
-- **How:** IMT measurement replaces subjective FAST checklist with an objective biomarker. The referral chain connects community health posts to Gasabo District Hospital, enabling faster triage and addressing the 72-hour "Treatment Vacuum."
-- **Status:** Met.
-
-### Objectives partially met
-- **Real-time AI overlay:** Depends on ML model availability; demo mode provides stub results when model is not loaded. *Why partial:* Model size (~2–3 GB) limits deployment on free-tier hosting; overlay works when model is present.
-- **Notifications:** Clinicians get **in-app** referral alerts on the web dashboard (API polling); configure SMTP in `.env` (see `backend/.env.example`) for **email** as well. SMS is not used.
-
-### Objectives not met / deferred
-- **Field pilot (30–50 participants, Kimironko/Bumbogo):** Scheduled for Jan–Mar 2026. *Why deferred:* Deployment and field testing required more time than the sprint allowed; the system is now ready for pilot.
-
----
-
-## Pushing the Full Product to GitHub
-
-The repository should contain everything needed to run CarotidCheck locally or deploy it. Excluded (via `.gitignore`):
-
-- `venv/`, `data/`, `uploads/` — local runtime data
-- `ML/models/` — large model files (download separately or use Git LFS)
-- `.env` — secrets (use `.env.example` as template)
-
-**Recommended repo contents:**
-
-- `app/` — Flutter app
-- `backend/` — FastAPI backend
-- `ML/` — notebooks, training scripts; **AttentionUNet.keras** (add via Git LFS if >100 MB)
-- `thesis/`, `report/` — documentation
-- `README.md`, `render.yaml`, `.env.example`
-
-**Clone and run:**
-
-```bash
-git clone https://github.com/Deolinda1506/Capstone-project.git
-cd Capstone-project
-# Follow Quick Start or Reviewer and moderator guide above
-```
 
 ---
 
@@ -650,7 +490,7 @@ flutter build web
 
 ### Android APK
 
-**Pre-built release (download):** [Google Drive — app-release.apk](https://drive.google.com/file/d/13zI5Jj2Ycf1280hRFSSBl9bhABMODMUz/view?usp=sharing) *(install on Android; allow installs from Drive / your browser if prompted).*
+**Pre-built release (download):** [Google Drive — app-release.apk](https://drive.google.com/file/d/1ZEFX7sM3_fsFJEZmSHGprKq9zI0tH5wm/view?usp=sharing) *(install on Android; allow installs from Drive / your browser if prompted).*
 
 **Build locally:**
 ```bash
@@ -660,7 +500,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://carotidcheck-api.
 ```
 
 **Install on Android device:**
-1. Transfer `app-release.apk` to your phone (USB, email, [Google Drive link above](https://drive.google.com/file/d/13zI5Jj2Ycf1280hRFSSBl9bhABMODMUz/view?usp=sharing), or download from a release).
+1. Transfer `app-release.apk` to your phone (USB, email, [Google Drive link above](https://drive.google.com/file/d/1ZEFX7sM3_fsFJEZmSHGprKq9zI0tH5wm/view?usp=sharing), or download from a release).
 2. On your Android device: **Settings → Security** → enable **Install from unknown sources** (or **Install unknown apps** for the file manager/browser you use).
 3. Open the APK file and tap **Install**.
 4. The APK built with the command above has the deployed API URL (`https://carotidcheck-api.onrender.com`) compiled in via `--dart-define`.
@@ -686,6 +526,7 @@ A 5-minute demo video should cover:
 - **Frontend:** Flutter, go_router, Provider, image_picker, flutter_map
 - **Backend:** FastAPI, SQLAlchemy, Pydantic v2, JWT
 - **ML:** TensorFlow (Attention U-Net), OpenCV
+- **UI design:** [Figma — CarotidCheck](https://www.figma.com/design/2RBiCJEMMr291thKV9nfnI/CarotidCheck?node-id=0-1)
 
 ---
 
