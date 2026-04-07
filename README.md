@@ -2,9 +2,11 @@
 
 AI-powered carotid ultrasound screening for stroke risk assessment in Rwanda. Community health workers capture scans, get instant IMT (intima-media thickness) and risk levels, and refer high-risk patients to hospitals.
 
-**Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · [Latency stats](https://carotidcheck-api.onrender.com/latency) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com/dashboard](https://carotidcheck-dashboard.onrender.com/dashboard) (see `render.yaml`) · **Android APK (Google Drive):** [app-release.apk](https://drive.google.com/file/d/1ZEFX7sM3_fsFJEZmSHGprKq9zI0tH5wm/view?usp=sharing) · **Demo video:** [5-min demo](https://drive.google.com/file/d/1cF0XLiqFo-9NMABwXhOqR2R74O_6UWwN/view?usp=sharing) · **UI (Figma):** [CarotidCheck design file](https://www.figma.com/design/2RBiCJEMMr291thKV9nfnI/CarotidCheck?node-id=0-1)
+**Live API:** [https://carotidcheck-api.onrender.com](https://carotidcheck-api.onrender.com) · [API docs](https://carotidcheck-api.onrender.com/docs) · [Health](https://carotidcheck-api.onrender.com/health) · [Latency stats](https://carotidcheck-api.onrender.com/latency) · **Web dashboard (Render static site):** after blueprint deploy, typically [https://carotidcheck-dashboard.onrender.com/dashboard](https://carotidcheck-dashboard.onrender.com/dashboard) (see `render.yaml`) · **Android APK (Google Drive):** [app-release.apk](https://drive.google.com/file/d/1ZEFX7sM3_fsFJEZmSHGprKq9zI0tH5wm/view?usp=sharing) · **Demo video:** [screen recording (Google Drive)](https://drive.google.com/file/d/1tNCGXnyegTJeC1Y9OPDsyHLHhDkml-Cz/view?usp=sharing) · **UI (Figma):** [CarotidCheck design file](https://www.figma.com/design/2RBiCJEMMr291thKV9nfnI/CarotidCheck?node-id=0-1)
 
 **Course submission — source repository:** [https://github.com/Deolinda1506/Capstone-project](https://github.com/Deolinda1506/Capstone-project) · **Clone URL:** `https://github.com/Deolinda1506/Capstone-project.git` (branch `main`).
+
+**Final report after defense:** The revised report should **reflect the defense panel’s feedback**. Where your programme asks for it, use the **comment section** (or equivalent) to **spell out each panel point** and **how the report was updated**—see [`docs/capstone-panel-feedback-comments.md`](docs/capstone-panel-feedback-comments.md). The Markdown master copy of the capstone text (including a **panel feedback** appendix) is in [`thesis/CAROTIDCHECK-FINAL-REPORT.md`](thesis/CAROTIDCHECK-FINAL-REPORT.md); export the signed PDF from your institutional Word template.
 
 ---
 
@@ -239,7 +241,7 @@ Open **http://localhost:5173** — login with a **staff** account created via yo
 
 ### Prerequisites
 
-- **Python 3.12** (3.13 not supported by PyTorch)
+- **Python 3.10–3.12** (match [`Installation`](#installation-and-dependencies); TensorFlow in `backend/requirements.txt` does not support 3.13 yet)
 - **Flutter 3.x** with Dart 3.10+
 - **Git**
 
@@ -330,7 +332,13 @@ cd app && flutter test -d macos integration_test/login_real_api_test.dart \
 # optional: --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
 ```
 
-**macOS Keychain / unsigned desktop builds:** Flutter integration tests may need Keychain clearing or a signed app build; see Flutter secure-storage docs if `E2E_*` tests behave oddly.
+**macOS Keychain (`-34018`) / unsigned desktop builds:** the test clears prefs and best-effort clears secure storage before login. On a **sandboxed, unsigned** macOS app, `FlutterSecureStorage.deleteAll()` may hit *“A required entitlement isn’t present”*; the test ignores that error and continues. If a **saved session** is still in Keychain, you may skip the login screen and see a confusing failure—pick one of these:
+
+1. **Manual reset:** Keychain Access → search `com.carotidcheck.carotidCheck` or “CarotidCheck” → remove related items → run again with real `E2E_*` defines.
+2. **Other devices:** run the same test on **Android or iOS** (`flutter test … -d <device>`), where `deleteAll()` usually works.
+3. **Signed macOS:** in Xcode, set a **Development Team** for the Runner target, add **`keychain-access-groups`** to `macos/Runner/DebugProfile.entitlements` and `Release.entitlements` (array entry `$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)`), then rebuild—Keychain clear works without manual cleanup (**requires** proper signing, not `CODE_SIGN_IDENTITY = -`).
+
+On macOS you may see `Failed to foreground app; open returned 1` while tests still **pass**—that only means the runner could not bring the window to the front; the run itself succeeded.
 
 **Key endpoints (Swagger):**
 - [Create patient](http://localhost:8000/docs#/patients/create_patient_patients_post) — `POST /patients`
@@ -354,6 +362,7 @@ flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 **Production API URL:**
 ```bash
 flutter run -d chrome --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
+# or without -d chrome for your default device:
 flutter run --dart-define=API_BASE_URL=https://carotidcheck-api.onrender.com
 ```
 
@@ -365,7 +374,7 @@ Clinician-facing web dashboard for high-risk referrals:
 
 ```bash
 cd web-dashboard
-npm install
+npm ci
 npm run dev
 ```
 
@@ -400,6 +409,8 @@ Capstone-project/   # repository root
 │   ├── notebooks/          # Carotid_Artery_Segmentation_Models_Comparison.ipynb
 │   └── carotid/            # Training scripts
 ├── web-dashboard/          # React + Vite web dashboard (clinicians)
+├── thesis/                 # Capstone report (Markdown master; panel feedback appendix)
+├── docs/                   # Architecture, usability runbook, panel-feedback guidance
 ├── data/                   # SQLite DB (created on first run)
 ├── uploads/                # Stored scan images (overlay) for clinician review
 └── README.md
@@ -508,6 +519,8 @@ flutter build apk --release --dart-define=API_BASE_URL=https://carotidcheck-api.
 ---
 
 ## Demo Video
+
+**Recording:** [Google Drive — demo video](https://drive.google.com/file/d/1tNCGXnyegTJeC1Y9OPDsyHLHhDkml-Cz/view?usp=sharing)
 
 A 5-minute demo video should cover:
 
